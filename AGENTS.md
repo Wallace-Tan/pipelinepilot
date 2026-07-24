@@ -48,6 +48,15 @@
 - Use Conventional Commit style: `feat(scope): summary`, `fix(scope): summary`, `docs: summary`, `test(scope): summary`.
 - PRs should state intent, tests run, security/policy impact, demo-mode impact, and screenshots for UI changes.
 
+
+## Git Branching Strategy
+
+- Use lightweight trunk-based development: `main` is the always-demo-ready branch.
+- Do not create long-lived `develop`, release, or integration branches for normal work.
+- Create short-lived branches scoped to one task or architectural boundary, using Conventional Commit-style prefixes such as `feat/policy-engine`, `fix/redaction-leak`, `docs/update-architecture`, `test/schema-drift-path`, or `chore/scaffold-apps`.
+- Prefer squash merges into `main` so the final commit follows Conventional Commit style.
+- Require review before merging changes that touch policy evaluation, approvals, audit logging, recovery execution, LLM prompts, skill contracts, credentials, or integration code.
+- Use git tags for demo and submission milestones, such as `demo-v0.1`, `schema-drift-e2e-ready`, and `hackathon-submission`.
 ## Code Review Checklist
 
 - Is every external operation behind a skill/adapter?
