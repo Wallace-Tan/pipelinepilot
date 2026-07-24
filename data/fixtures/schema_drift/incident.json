@@ -1,0 +1,17 @@
+{
+  "schema_version": "incident.v1",
+  "id": "inc-retail-orders-20260723",
+  "pipeline_name": "retail_orders_daily",
+  "run_id": "airflow-run-20260723T040000Z",
+  "mode": "fixture",
+  "status": "created",
+  "severity": "high",
+  "summary": "Daily retail orders load failed after upstream schema added a required order_channel field not present in the staging model.",
+  "detected_at": "2026-07-23T04:18:00Z",
+  "evidence_ids": [
+    "ev-monitoring-retail-orders",
+    "ev-airflow-parser-retail-orders",
+    "ev-dbt-retail-orders",
+    "ev-snowflake-retail-orders"
+  ]
+}

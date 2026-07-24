@@ -1,0 +1,17 @@
+{
+  "schema_version": "recommendation.v1",
+  "id": "rec-retail-orders-schema-drift",
+  "incident_id": "inc-retail-orders-20260723",
+  "cause": "Upstream raw orders added order_channel, but the staging model projection and contract were not updated before the daily run.",
+  "confidence_band": "high",
+  "evidence_ids": [
+    "ev-monitoring-retail-orders",
+    "ev-airflow-parser-retail-orders",
+    "ev-dbt-retail-orders",
+    "ev-snowflake-retail-orders"
+  ],
+  "runbook_ids": ["runbook-schema-drift"],
+  "recommended_action": "Update the fixture staging projection for order_channel, rerun dbt for stg_orders and downstream order models, then validate freshness.",
+  "uncertainty": "Live source ownership and production deployment status are unavailable in fixture mode.",
+  "mode": "fixture"
+}

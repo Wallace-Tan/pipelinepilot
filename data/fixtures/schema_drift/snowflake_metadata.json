@@ -1,0 +1,25 @@
+{
+  "schema_version": "evidence.v1",
+  "id": "ev-snowflake-retail-orders",
+  "incident_id": "inc-retail-orders-20260723",
+  "source": "snowflake_metadata",
+  "evidence_type": "read_only_schema_context",
+  "mode": "fixture",
+  "summary": "Snowflake metadata fixture shows order_channel exists in raw orders but is missing from the staging projection.",
+  "sanitized_payload": {
+    "database": "DEMO_RETAIL",
+    "schema": "RAW",
+    "table": "ORDERS",
+    "observed_columns": ["order_id", "store_id", "order_total", "order_channel", "loaded_at"],
+    "staging_projection_columns": ["order_id", "store_id", "order_total", "loaded_at"],
+    "contains_pii": false
+  },
+  "citations": [
+    {
+      "document_id": "runbook-schema-drift",
+      "title": "Schema Drift Response",
+      "section": "Compare source metadata with staging projections"
+    }
+  ],
+  "collected_at": "2026-07-23T04:22:10Z"
+}

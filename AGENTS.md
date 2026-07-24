@@ -3,8 +3,16 @@
 ## Scope and Current State
 
 - Applies to the repository root unless a deeper `AGENTS.md` exists; read the deepest applicable file first.
-- This repository currently contains planning documents only. No runtime, package manifest, formatter, CI workflow, test suite, or application command is present.
+- This repository contains a Milestone 1 scaffold: FastAPI backend, Vite React TypeScript frontend, and sanitized fixture/runbook data. No persistence, real integrations, authentication, recovery behavior, formatter, or CI workflow is present.
 - Do not invent setup, build, lint, test, or deployment commands. Add them only with the supporting project configuration and update this file in the same change.
+
+
+## Canonical Local Commands
+
+- Backend setup/test: from `backend`, run `uv sync` and `uv run pytest`.
+- Backend dev server: from `backend`, run `uv run uvicorn app.main:app --host 127.0.0.1 --port 8000`.
+- Frontend setup/build: from `frontend`, run `npm install` and `npm run build`.
+- Frontend dev server: from `frontend`, run `npm run dev`.
 
 ## Coding Philosophy
 

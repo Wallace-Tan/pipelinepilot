@@ -1,0 +1,24 @@
+{
+  "schema_version": "evidence.v1",
+  "id": "ev-dbt-retail-orders",
+  "incident_id": "inc-retail-orders-20260723",
+  "source": "dbt",
+  "evidence_type": "model_failure_context",
+  "mode": "fixture",
+  "summary": "dbt fixture marks stg_orders as failed and downstream fct_orders freshness as stale.",
+  "sanitized_payload": {
+    "failed_model": "stg_orders",
+    "downstream_models": ["fct_orders", "daily_store_revenue"],
+    "failed_tests": ["accepted_values_order_channel"],
+    "freshness_status": "stale",
+    "contains_pii": false
+  },
+  "citations": [
+    {
+      "document_id": "runbook-schema-drift",
+      "title": "Schema Drift Response",
+      "section": "Validate downstream model contracts"
+    }
+  ],
+  "collected_at": "2026-07-23T04:21:45Z"
+}

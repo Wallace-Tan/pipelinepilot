@@ -1,0 +1,17 @@
+{
+  "schema_version": "evidence.v1",
+  "id": "ev-airflow-parser-retail-orders",
+  "incident_id": "inc-retail-orders-20260723",
+  "source": "airflow_log",
+  "evidence_type": "sanitized_task_log",
+  "mode": "fixture",
+  "summary": "Sanitized parser log shows missing column order_channel while compiling the staging orders model.",
+  "sanitized_payload": {
+    "error_signature": "ColumnNotFound: order_channel",
+    "log_excerpt": "Compilation failed for stg_orders: column order_channel is required by downstream contract but absent from selected source columns.",
+    "redactions": [],
+    "contains_pii": false
+  },
+  "citations": [],
+  "collected_at": "2026-07-23T04:20:30Z"
+}

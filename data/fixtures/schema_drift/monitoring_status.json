@@ -1,0 +1,19 @@
+{
+  "schema_version": "evidence.v1",
+  "id": "ev-monitoring-retail-orders",
+  "incident_id": "inc-retail-orders-20260723",
+  "source": "monitoring",
+  "evidence_type": "pipeline_run_status",
+  "mode": "fixture",
+  "summary": "Airflow fixture reports retail_orders_daily failed in transform_orders with no retry currently running.",
+  "sanitized_payload": {
+    "dag_id": "retail_orders_daily",
+    "task_id": "transform_orders",
+    "state": "failed",
+    "try_number": 1,
+    "environment": "fixture",
+    "contains_pii": false
+  },
+  "citations": [],
+  "collected_at": "2026-07-23T04:19:15Z"
+}

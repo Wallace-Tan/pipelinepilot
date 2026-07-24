@@ -1,0 +1,35 @@
+{
+  "schema_version": "policy.v1",
+  "id": "policy-demo-2026-07",
+  "version": "2026.07-demo",
+  "mode": "fixture",
+  "immutable": true,
+  "rules": [
+    {
+      "id": "rule-fixture-schema-drift-recovery",
+      "action": "schema_drift_recovery",
+      "environment": "fixture",
+      "minimum_role": "operator",
+      "risk": "high",
+      "decision": "approval_required",
+      "required_approver_role": "operator",
+      "reasons": [
+        "Recovery changes downstream model execution state.",
+        "Operator approval must be bound to the proposed execution."
+      ]
+    },
+    {
+      "id": "rule-fixture-read-only-investigation",
+      "action": "read_only_investigation",
+      "environment": "fixture",
+      "minimum_role": "viewer",
+      "risk": "low",
+      "decision": "allow",
+      "required_approver_role": null,
+      "reasons": [
+        "Read-only fixture evidence collection does not mutate external systems."
+      ]
+    }
+  ],
+  "default_decision": "deny"
+}
