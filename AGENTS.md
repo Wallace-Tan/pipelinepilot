@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 ## Scope and Current State
 
@@ -22,10 +22,10 @@
 
 ## Folder, Naming, and Architecture Rules
 
-- Follow the folder boundaries in `ARCHITECTURE.md`; keep domain logic independent of HTTP, UI, and vendor SDKs.
+- Follow the folder boundaries in `docs/ARCHITECTURE.md`; keep domain logic independent of HTTP, UI, and vendor SDKs.
 - Use explicit, intent-revealing names: `IncidentService`, `PolicyDecision`, `RecoveryExecution`; avoid `utils`, `helpers`, and untyped catch-all payloads.
 - Define skill inputs and outputs as versioned schemas. Each skill has one narrow responsibility.
-- Depend inward: API/UI → services → domain. Vendor adapters implement interfaces and do not leak vendor types into domain code.
+- Depend inward: API/UI â†’ services â†’ domain. Vendor adapters implement interfaces and do not leak vendor types into domain code.
 - Centralize business rules, policy evaluation, redaction, and state transitions; never duplicate them across routes or skills.
 
 ## API, Errors, Logging, and Testing
@@ -51,7 +51,7 @@
 
 ## Documentation and Contribution Rules
 
-- Update `PRD.md`, `ARCHITECTURE.md`, `TASKS.md`, or `HACKATHON.md` when a change affects their contractual decisions.
+- Update `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, or `docs/HACKATHON.md` when a change affects their contractual decisions.
 - Keep demo data sanitized and versioned. Never commit `.env` files, credentials, production logs, or generated secret-bearing artifacts.
 - Use Conventional Commit style: `feat(scope): summary`, `fix(scope): summary`, `docs: summary`, `test(scope): summary`.
 - PRs should state intent, tests run, security/policy impact, demo-mode impact, and screenshots for UI changes.
@@ -80,3 +80,4 @@
 - Never expose PII, secrets, raw production logs, or credentials to an LLM.
 - Never tightly couple skills or duplicate business logic.
 - Never silently execute a high-risk action or represent fixture behavior as production behavior.
+
