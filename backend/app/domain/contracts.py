@@ -81,6 +81,11 @@ class RecoveryExecutionStatus(StrEnum):
     BLOCKED = "blocked"
 
 
+class ValidationStatus(StrEnum):
+    PASSED = "passed"
+    FAILED = "failed"
+
+
 class EvidenceCitation(StrictContract):
     document_id: SafeId
     title: str = Field(min_length=1, max_length=160)
@@ -168,7 +173,20 @@ class Approval(StrictContract):
     actor_role: ActorRole
     reason: str = Field(min_length=1, max_length=500)
     policy_version: str = Field(min_length=1, max_length=40)
+    request_fingerprint: SafeId
     created_at: datetime
+
+
+class ExecutionProposal(StrictContract):
+    schema_version: Literal["execution_proposal.v1"]
+    id: SafeId
+    incident_id: SafeId
+    action: str = Field(min_length=1, max_length=120)
+    idempotency_key: SafeId
+    policy_decision_id: SafeId
+    policy_version: str = Field(min_length=1, max_length=40)
+    evidence_ids: list[SafeId] = Field(default_factory=list)
+    request_fingerprint: SafeId
 
 
 class RecoveryExecution(StrictContract):
@@ -180,9 +198,20 @@ class RecoveryExecution(StrictContract):
     status: RecoveryExecutionStatus
     policy_decision_id: SafeId
     approval_id: SafeId | None = None
+    request_fingerprint: SafeId
     external_reference: str | None = Field(default=None, max_length=160)
     created_at: datetime
     updated_at: datetime
+
+
+class ValidationResult(StrictContract):
+    schema_version: Literal["validation_result.v1"]
+    execution_id: SafeId
+    incident_id: SafeId
+    status: ValidationStatus
+    mode: RuntimeMode
+    checks: list[str] = Field(min_length=1)
+    failure_reason: str | None = Field(default=None, max_length=500)
 
 
 class AuditEvent(StrictContract):

@@ -154,6 +154,8 @@ The MVP ingests small, reviewed Markdown runbooks and sanitized RCA/feedback rec
 
 Rules match action, environment, incident severity, retry count, and role. They calculate risk (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) and decision (`ALLOW`, `APPROVAL_REQUIRED`, `DENY`). The engine returns the matched rule, policy version, reasons, and required approver role. Default is deny. Approval binds to an immutable execution request and expires on policy/action/evidence change. Model advice cannot override a policy result.
 
+Milestone 5 uses a deterministic fixture recovery path. Execution proposals carry a SHA-256 request fingerprint over the incident snapshot, action, policy decision/version, and evidence IDs. Approval creates a planned execution record before binding the approval. Recovery requires the matching approval and idempotency key, then moves through `EXECUTING` and `RECOVERED`; validation alone may move the incident to `VALIDATED`. Failed or blocked records remain persisted and auditable.
+
 ## Future Scaling
 
 Replace fixture adapters with queued workers and production connectors; move state to Postgres/Snowflake, documents to governed storage/Cortex Search, and audit to a tamper-evident event stream. Add SSO, tenant/environment boundaries, distributed idempotency, connector health checks, approval delegation, evaluation datasets, and observability for skill latency and decision quality. Keep the skill contracts and deterministic policy engine unchanged.

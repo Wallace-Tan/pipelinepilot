@@ -115,8 +115,8 @@ class ExecutionRepository:
         self.connection.execute(
             """INSERT OR REPLACE INTO execution_history
             (id, incident_id, action, idempotency_key, status, policy_decision_id,
-             approval_id, external_reference, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             approval_id, request_fingerprint, external_reference, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 execution.id,
                 execution.incident_id,
@@ -125,12 +125,37 @@ class ExecutionRepository:
                 execution.status,
                 execution.policy_decision_id,
                 execution.approval_id,
+                execution.request_fingerprint,
                 execution.external_reference,
                 execution.created_at.isoformat(),
                 execution.updated_at.isoformat(),
             ),
         )
         self.connection.commit()
+
+    def get_by_idempotency_key(self, idempotency_key: str) -> RecoveryExecution | None:
+        row = self.connection.execute(
+            "SELECT * FROM execution_history WHERE idempotency_key = ?",
+            (idempotency_key,),
+        ).fetchone()
+        if row is None:
+            return None
+        return RecoveryExecution.model_validate(
+            {
+                "schema_version": "execution.v1",
+                "id": row["id"],
+                "incident_id": row["incident_id"],
+                "action": row["action"],
+                "idempotency_key": row["idempotency_key"],
+                "status": row["status"],
+                "policy_decision_id": row["policy_decision_id"],
+                "approval_id": row["approval_id"],
+                "request_fingerprint": row["request_fingerprint"],
+                "external_reference": row["external_reference"],
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+        )
 
 
 class ApprovalRepository:
@@ -141,8 +166,8 @@ class ApprovalRepository:
         self.connection.execute(
             """INSERT OR REPLACE INTO approvals
             (id, incident_id, execution_id, schema_version, decision, actor_role,
-             reason, policy_version, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             reason, policy_version, request_fingerprint, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 approval.id,
                 approval.incident_id,
@@ -152,10 +177,30 @@ class ApprovalRepository:
                 approval.actor_role,
                 approval.reason,
                 approval.policy_version,
+                approval.request_fingerprint,
                 approval.created_at.isoformat(),
             ),
         )
         self.connection.commit()
+
+    def get(self, approval_id: str) -> Approval | None:
+        row = self.connection.execute("SELECT * FROM approvals WHERE id = ?", (approval_id,)).fetchone()
+        if row is None:
+            return None
+        return Approval.model_validate(
+            {
+                "schema_version": row["schema_version"],
+                "id": row["id"],
+                "incident_id": row["incident_id"],
+                "execution_id": row["execution_id"],
+                "decision": row["decision"],
+                "actor_role": row["actor_role"],
+                "reason": row["reason"],
+                "policy_version": row["policy_version"],
+                "request_fingerprint": row["request_fingerprint"],
+                "created_at": row["created_at"],
+            }
+        )
 
 
 class AuditRepository:

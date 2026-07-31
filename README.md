@@ -48,7 +48,7 @@ Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbook
 
 No real Airflow, dbt, Snowflake, CoCo, or recovery behavior is implemented; external integrations remain fixture-only.
 
-Milestone 3 investigation is service-level and uses the monitoring, Airflow-log, dbt, and Snowflake-metadata fixtures. A future read-only live adapter must use the same skill boundary; fixture mode remains the selected fallback.
+Milestone 5 adds deterministic policy evaluation, fingerprint-bound approvals, idempotent fixture recovery, and validation-gated incident transitions. Milestone 3 investigation remains service-level and uses the monitoring, Airflow-log, dbt, and Snowflake-metadata fixtures. No live recovery integration is enabled.
 
 ## Fixture-mode security
 

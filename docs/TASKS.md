@@ -36,11 +36,11 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 5 — Governance and Recovery
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- | --- |
-| PP-013 | Policy engine | Evaluate versioned rules, risk, and default-deny decisions. | PP-002, PP-003 | P0 / 4h | Schema-drift action requires approval; unknown action is denied. | `feat(policy): add deterministic evaluator` / `feat/pp-013-policy-engine` |
-| PP-014 | Approval workflow | Bind approval/rejection to immutable proposed execution. | PP-004, PP-005, PP-013 | P0 / 4h | Only Operator/Admin can approve; changed action invalidates approval. | `feat(approvals): add governed approval` / `feat/pp-014-approvals` |
-| PP-015 | Recovery and validation skills | Implement idempotent demo/sandbox recovery and validation checks. | PP-007, PP-014 | P0 / 5h | No execution without policy+approval; validation gates closure. | `feat(recovery): add controlled execution` / `feat/pp-015-recovery-validation` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-013 | Achieved | Policy engine | Evaluate versioned rules, risk, and default-deny decisions. | PP-002, PP-003 | P0 / 4h | Schema-drift action requires approval; unknown action is denied. | `feat(policy): add deterministic evaluator` / `feat/pp-013-policy-engine` |
+| PP-014 | Achieved | Approval workflow | Bind approval/rejection to immutable proposed execution. | PP-004, PP-005, PP-013 | P0 / 4h | Only Operator/Admin can approve; changed action invalidates approval. | `feat(approvals): add governed approval` / `feat/pp-014-approvals` |
+| PP-015 | Achieved | Recovery and validation skills | Implement idempotent demo/sandbox recovery and validation checks. | PP-007, PP-014 | P0 / 5h | No execution without policy+approval; validation gates closure. | `feat(recovery): add controlled execution` / `feat/pp-015-recovery-validation` |
 
 ## Milestone 6 — API and Dashboard
 
