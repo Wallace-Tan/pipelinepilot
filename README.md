@@ -1,6 +1,6 @@
 ﻿# PipelinePilot
 
-PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. Milestone 3 includes typed context skills, fixture adapters, concurrent investigation, SQLite persistence, fixture-mode request identity/RBAC, and recursive evidence redaction.
+PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. The current MVP includes typed context skills, a deterministic fixture decision fallback, SQLite persistence, fixture-mode request identity/RBAC, redaction, governed recovery, a versioned API, and an API-backed dashboard.
 
 ## Prerequisites
 

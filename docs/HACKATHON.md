@@ -9,7 +9,7 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 | Criterion | Feature proof | What to show |
 | --- | --- | --- |
 | Real-World Relevancy (30%) | Airflow/dbt/Snowflake incident flow, PII redaction, RBAC, runbook-grounded RCA | Start with the engineer’s painful manual workflow; show impact and safeguards. |
-| Technical Execution (40%) | CoCo orchestration, typed skills, parallel context, retrieval citations, policy/approval gate, audit events | Show the skill trace and explain why CoCo does not directly call systems. |
+| Technical Execution (40%) | Typed skills, parallel context, retrieval citations, deterministic decision fallback, policy/approval gate, audit events | Show the skill trace and explain the future CoCo boundary and why no adapter directly calls systems. |
 | Solution Completeness (30%) | Failure → evidence → decision → policy → approval → recovery → validation → report | Complete the one seeded scenario live, including the initial blocked state. |
 
 ## Five-Minute Demo Script
@@ -30,7 +30,7 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 
 ## Judge Talking Points
 
-- CoCo CLI is the reasoning/orchestration brain, exposed through a real multi-step skill trace—not a single prompt wrapper.
+- The decision boundary is typed and adapter-based; the selected MVP implementation is a deterministic fixture fallback because no live CoCo credentials or integration are configured.
 - Skills enforce least privilege: read skills cannot execute, execution cannot access arbitrary data.
 - The recommendation is grounded in retrieved runbooks and evidence IDs, not generic text.
 - Policy is deterministic, versioned, default-deny, and separate from AI output.
@@ -70,4 +70,4 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 - Every recovery attempt visibly has a policy result, approval (if required), and audit event.
 - The UI identifies fixture/sandbox/live mode truthfully.
 - Architecture and README explain CoCo’s orchestration role and skill boundaries.
-- A short backup recording exists before submission.
+- A short backup recording should be created externally before submission; the repository provides a sanitized replay script and recording checklist.

@@ -31,8 +31,8 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 | ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | PP-010 | Achieved | Knowledge ingestion/retrieval | Load curated runbooks and provide filtered lexical retrieval. | PP-003, PP-004 | P0 / 4h | Schema runbook is ranked for seeded incident. | `feat(knowledge): add runbook retrieval` |
-| PP-011 | Achieved | CoCo orchestration adapter | Validate the deterministic fixture recommendation against typed evidence and citations. | PP-007, PP-010 | P0 / 6h | Recommendation cites available evidence and a matching runbook. | `feat(knowledge): add fixture recommendation` |
-| PP-012 | Achieved | Decision evaluation cases | Reject mismatched, uncited, and malformed recommendation output. | PP-011 | P0 / 3h | Invalid decisions never reach governed execution. | `test(api): cover decision guardrails` |
+| PP-011 | Fallback selected | Decision adapter and fixture fallback | Validate a deterministic fixture recommendation behind a typed adapter boundary; live CoCo remains unconfigured. | PP-007, PP-010 | P0 / 6h | Fallback identifies its adapter mode/reason and cites available evidence and a matching runbook. | `feat(knowledge): add fixture decision fallback` |
+| PP-012 | Achieved | Decision evaluation cases | Reject mismatched, uncited, malformed, and knowledge-missing recommendation output. | PP-011 | P0 / 3h | Invalid decisions never reach governed execution. | `test(api): cover decision guardrails` |
 
 ## Milestone 5 — Governance and Recovery
 
@@ -52,14 +52,14 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 7 — Verification and Demo
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- |
-| PP-019 | End-to-end tests | Test detect → investigate → approve → recover → validate → report. | PP-016 | P0 / 5h | Tests cover denial, missing approval, and happy path. | `test(e2e): cover governed recovery` / `test/pp-019-e2e` |
-| PP-020 | Demo resilience | Add reset seed, loading/error states, adapter-mode banners, and timing rehearsal. | PP-017, PP-019 | P0 / 4h | Demo restarts cleanly and completes in five minutes. | `chore(demo): harden presentation flow` / `chore/pp-020-demo-hardening` |
-| PP-021 | Judge assets | Finalize README, architecture visuals, five-minute script, and backup recording. | PP-020 | P0 / 3h | Another person can run/replay the demo. | `docs: finalize hackathon submission` / `docs/pp-021-submission` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-019 | Achieved | End-to-end tests | Test the governed lifecycle, denial paths, persistence, idempotency, fallback behavior, and report/feedback output. | PP-016 | P0 / 5h | Automated tests verify API and service behavior, including failure cases. | `test(e2e): cover governed recovery` |
+| PP-020 | Achieved | Demo resilience | Provide reset/status services, loading/error states, adapter-mode banners, and timing replay. | PP-017, PP-019 | P0 / 4h | Demo restarts cleanly and has browser/API recovery paths. | `chore(demo): harden presentation flow` |
+| PP-021 | Partial | Judge assets | Provide truthful README, architecture/demo guide, replay output, and submission checklist. | PP-020 | P0 / 3h | Another person can run/replay the demo; external backup recording remains to be created. | `docs: finalize hackathon submission` |
 
 ## Milestone 8 — Stretch (only after PP-021)
 
 PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow adapters (P2/8h), PP-024 incident similarity/feedback ranking (P2/6h), PP-025 Slack/Jira notification (P2/4h), PP-026 policy UI (P2/8h), and PP-027 multi-pipeline routing (P2/8h). Each must retain the contracts and guardrails established above.
 
-Milestone 7 status: PP-019, PP-020, and PP-021 are Achieved. Verification, reset/status resilience, replay tooling, and judge documentation are available in the repository.
+Milestone 7 status: PP-019 and PP-020 are Achieved. PP-021 is Partial until the external backup recording and final submission review are completed.

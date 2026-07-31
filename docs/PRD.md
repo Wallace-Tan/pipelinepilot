@@ -70,7 +70,7 @@ For the demo: a viewer sees the incident; an operator receives a grounded schema
 
 ## Demo Story
 
-At 09:02 the daily retail orders DAG fails after a supplier adds `loyalty_tier`. PipelinePilot gathers a parser error, dbt freshness failure, and compatible Snowflake metadata. It retrieves the schema-change runbook and identifies schema drift with a **high confidence band**. Policy marks the proposed controlled recovery as approval-required. An operator approves it, the recovery skill runs in demo/sandbox mode, validation passes, and the incident page presents an evidence-linked RCA and audit trail.
+At 04:18 UTC on 23 July 2026, the `retail_orders_daily` DAG fails after an upstream source adds `order_channel`. PipelinePilot gathers a parser error, dbt freshness failure, and fixture Snowflake metadata. It retrieves the schema-change runbook and uses the deterministic fixture decision fallback to identify schema drift with a **high confidence band**. Policy marks the proposed controlled recovery as approval-required. An operator approves it, the recovery skill runs in fixture mode, validation passes, and the incident page presents an evidence-linked RCA and audit trail.
 
 ## Seven-Day MVP Scope
 
@@ -82,4 +82,4 @@ Embedding-backed retrieval, incident similarity, feedback-weighted ranking, real
 
 ## Risks and Assumptions
 
-CoCo CLI availability or its local interface may differ from assumptions; isolate it behind an orchestrator adapter with a deterministic fallback. External credentials may be unavailable; the demo must use labeled fixtures. Runbooks must be short and curated. The operator remains accountable for approval. Policy is the source of authority, not model output.
+CoCo CLI availability or its local interface may differ from assumptions; the MVP therefore exposes a typed decision-adapter boundary and selects a deterministic fixture fallback. External credentials are not used; the demo uses labeled fixtures. Runbooks must be short and curated. The operator remains accountable for approval. Policy is the source of authority, not model output.

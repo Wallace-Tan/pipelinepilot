@@ -121,8 +121,10 @@ sequenceDiagram
 | `POST /v1/incidents/{id}/feedback` | Record correction | Operator |
 | `GET /v1/policies/current` | Read active policy | Viewer |
 | `GET /v1/audit-logs` | Query audit events | Admin |
+| `GET /v1/demo/status` | Read fixture/database/adapter readiness | Viewer |
+| `POST /v1/demo/reset` | Recreate the seeded fixture store | Admin, fixture mode only |
 
-All mutation endpoints use request IDs/idempotency keys, return `correlation_id`, and reject unauthorized transitions with machine-readable errors.
+All mutation endpoints use request IDs/idempotency keys, return `correlation_id`, and reject unauthorized transitions with machine-readable errors. Approval requests explicitly support both approved and rejected decisions. Reports include recommendation, policy decision, evidence, execution, validation, audit, and feedback metadata.
 
 In fixture mode, request identity is supplied through `X-Actor-Id` and `X-Actor-Role` headers. Missing headers resolve to a read-only Viewer identity; authorization is enforced by reusable server-side dependencies rather than UI state.
 
@@ -130,7 +132,7 @@ In fixture mode, request identity is supplied through `X-Actor-Id` and `X-Actor-
 
 | Table | Key fields |
 | --- | --- |
-| `incidents` | `id`, pipeline/run identifiers, status, severity, summary, recommendation JSON, timestamps |
+| `incidents` | `id`, pipeline/run identifiers, status, severity, summary, timestamps |
 | `incident_evidence` | `id`, `incident_id`, source, type, sanitized payload, hash, collected_at |
 | `audit_logs` | `id`, correlation/incident IDs, event type, actor, policy version, before/after hashes, timestamp |
 | `policies` | `id`, version, environment, rule JSON, active, effective_at |
@@ -139,12 +141,14 @@ In fixture mode, request identity is supplied through `X-Actor-Id` and `X-Actor-
 | `knowledge_documents` | `id`, title, type, tags, source/version, sanitized content, checksum |
 | `knowledge_chunks` | `id`, document ID, text, metadata, optional embedding reference |
 | `execution_history` | `id`, incident ID, action, idempotency key, policy/approval IDs, status, external ref, timestamps |
+| `recommendations` | `id`, incident ID, validated decision JSON, created_at |
+| `validation_results` | `execution ID`, incident ID, validation JSON, created_at |
 
 Use foreign keys, immutable append-only audit records, and indexes on incident status, pipeline/run IDs, and knowledge tags. The MVP uses SQLite migrations and typed repositories. Store raw sensitive logs outside the application store—or not at all in the MVP.
 
 ## Security Architecture
 
-Authenticate users and map them to Viewer, Operator, or Admin roles server-side. Give each integration a separate least-privilege identity; Snowflake access is read-only for metadata and no agent owns a general-purpose SQL credential. Redact PII before persistence outside a restricted evidence zone and before any CoCo call. Read secrets from deployment-managed secret references, never API requests, logs, fixtures, or Git. Audit authentication, authorization, policy, approval, execution, and validation events with correlation IDs.
+Authenticate users and map them to Viewer, Operator, or Admin roles server-side. Give each integration a separate least-privilege identity; Snowflake access is read-only for metadata and no agent owns a general-purpose SQL credential. Redact PII before persistence outside a restricted evidence zone and before any CoCo call. Read secrets from deployment-managed secret references, never API requests, logs, fixtures, or Git. Audit authentication, authorization, policy, approval/rejection, execution, and validation events with correlation IDs.
 
 ## RAG Architecture
 
@@ -158,7 +162,7 @@ Milestone 5 uses a deterministic fixture recovery path. Execution proposals carr
 
 Milestone 6 exposes these services through a FastAPI application factory. API dependencies provide SQLite repositories, fixture-header identity, role authorization, correlation IDs, and idempotency keys. Responses use typed `/v1` contracts; failures return a safe error envelope and never expose raw fixture payloads or credentials. The React dashboard reads incident detail from the API and presents investigation, approval, recovery, validation, report, and feedback controls as fixture-mode operations.
 
-Milestone 7 adds a fixture-only demo control plane. `GET /v1/demo/status` reports mode, seed, database, and adapter readiness. Admin-only `POST /v1/demo/reset` recreates the local fixture store and seeds the schema-drift incident; it is deliberately unavailable outside fixture mode. End-to-end tests exercise denial and happy paths, while the replay script provides a deterministic backup demonstration without browser state.
+Milestone 7 adds a fixture-only demo control plane. `GET /v1/demo/status` reports mode, seed, database, and adapter readiness. Admin-only `POST /v1/demo/reset` recreates the local fixture store and seeds the schema-drift incident; it is deliberately unavailable outside fixture mode. End-to-end tests exercise denial and happy paths, while the replay script provides a deterministic backup demonstration without browser state. The MVP uses the typed fixture decision fallback rather than a live CoCo adapter.
 
 ## Future Scaling
 
