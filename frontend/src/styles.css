@@ -76,6 +76,12 @@ kbd { border: 1px solid var(--hairline-strong); border-radius: 4px; color: var(-
 .api-banner.is-error { border-color: rgba(183, 61, 73, .28); color: var(--red); background: rgba(183, 61, 73, .05); }
 .api-banner.is-ready { color: var(--emerald); background: rgba(22, 132, 95, .04); }
 .api-banner .text-action { margin: 0 0 0 auto; }
+.report-panel { margin-top: 16px; padding: 22px; }
+.report-content { display: grid; gap: 12px; border-top: 1px solid var(--hairline); margin-top: 16px; padding-top: 16px; }
+.feedback-form { display: flex; gap: 8px; margin-top: 16px; }
+.feedback-form input { min-width: 0; flex: 1; border: 1px solid var(--hairline); border-radius: 6px; color: var(--ink); background: var(--surface-2); padding: 9px 10px; font: inherit; font-size: 11px; }
+.feedback-form input:focus { border-color: var(--lavender); outline: 2px solid rgba(98, 104, 217, .15); }
+.feedback-form .secondary-button:disabled { cursor: not-allowed; opacity: .5; }
 .incident-header { display: flex; justify-content: space-between; gap: 30px; padding-bottom: 36px; }
 .eyebrow-row { gap: 10px; margin-bottom: 13px; }
 h1, h2, p { margin: 0; }

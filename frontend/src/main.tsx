@@ -27,8 +27,8 @@ type WorkflowStep = {
 };
 
 type PolicyPosture = {
-  decision: "Approval required";
-  risk: "High";
+  decision: string;
+  risk: string;
   reason: string;
   action: string;
 };
@@ -44,6 +44,7 @@ type AuditEntry = {
 type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; collected_at: string; citations: { title: string; section: string }[] };
 type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
+type ApiReport = { recommendation: { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; uncertainty: string } | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
 
 const API_INCIDENT_ID = "inc-retail-orders-20260723";
 const API_HEADERS = { "X-Actor-Id": "operator-demo", "X-Actor-Role": "operator", "Content-Type": "application/json" };
@@ -191,17 +192,22 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null);
+  const [report, setReport] = useState<ApiReport | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
 
   const refresh = async () => {
     setLoading(true);
     try {
-      const [detail, statusResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status")]);
+      const [detail, statusResponse, reportResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status"), fetch(`/v1/incidents/${API_INCIDENT_ID}/report`)]);
       if (!statusResponse.ok) throw new Error("Demo readiness status is unavailable.");
       setDemoStatus(await statusResponse.json() as DemoStatus);
+      const reportData = reportResponse.ok ? await reportResponse.json() as ApiReport : null;
+      setReport(reportData);
       setLiveIncident(mapIncident(detail.incident));
       setLiveEvidence(detail.evidence.map(mapEvidence));
       setLiveAudit(detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" : "neutral" })));
       if (detail.recommendation) setLivePolicy({ decision: "Approval required", risk: "High", reason: detail.recommendation.uncertainty, action: detail.recommendation.recommended_action });
+      if (reportData?.policy_decision) setLivePolicy({ decision: reportData.policy_decision.decision.replace("_", " "), risk: reportData.policy_decision.risk, reason: detail.recommendation?.uncertainty ?? "Policy decision loaded from the server.", action: detail.recommendation?.recommended_action ?? "" });
       setApiError(null);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : "Unable to load incident data.");
@@ -234,6 +240,12 @@ function App() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Action failed.");
     }
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackText.trim()) return;
+    await runAction("feedback", { correction: feedbackText.trim(), outcome: "operator-noted" }, `ui-feedback-${Date.now()}`);
+    setFeedbackText("");
   };
 
   const filteredEvidence = useMemo(
@@ -282,7 +294,7 @@ function App() {
           <div className="breadcrumb"><span>Workspace</span><Icon name="chevron" size={13} /><strong>{activeNav}</strong></div>
           <div className="topbar-actions">
             <button className="topbar-button" onClick={() => setNotice("Global search will connect to incident and evidence APIs in Milestone 6.")} title="Search workspace" type="button"><Icon name="search" size={16} /><span>Search</span></button>
-            <button className="topbar-button" onClick={() => void resetDemo()} title="Admin-only fixture reset" type="button">Reset fixture</button>
+            <button className="topbar-button" onClick={() => void resetDemo()} title="Admin-only fixture reset using the explicit Admin demo identity" type="button">Reset fixture · Admin demo</button>
             <button className="icon-button" onClick={() => setNotice("All fixture adapters are responding. Snowflake metadata is marked degraded by design.")} title="System health" type="button"><span className="status-dot is-emerald" /><Icon name="activity" size={16} /></button>
           </div>
         </header>
@@ -348,11 +360,11 @@ function App() {
                   {loading && <span className="muted-label">Loading live incident state…</span>}
                   {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
                   {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">Investigate fixture incident</button>}
-                  {!loading && liveIncident.status === "Investigated" && <button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button>}
+                  {!loading && liveIncident.status === "Investigated" && <><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." })} type="button">Reject recovery</button></>}
                   {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
                   {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
-                <div className="preview-note"><span className="signal-dot is-amber" /><span>Recovery controls appear here after the API and approval workflow are connected.</span></div>
+                <div className="preview-note"><span className="signal-dot is-amber" /><span>Fixture actions are governed by the server policy and remain visibly non-production.</span></div>
               </section>
               <section className="panel recommendation-panel animate-in delay-4">
                 <div className="section-heading"><div><span className="eyebrow">Decision support</span><h2>Root cause signal</h2></div><span className="confidence">High</span></div>
@@ -365,6 +377,12 @@ function App() {
           <section className="panel audit-panel animate-in delay-4" id="audit-timeline">
             <div className="section-heading"><div><span className="eyebrow">Traceability</span><h2>Audit timeline</h2></div><button className="text-action" onClick={() => setNotice("Full audit filtering will be available with the Milestone 6 API.")} type="button">View full log <Icon name="arrow" size={14} /></button></div>
             <div className="audit-list">{liveAudit.map((entry) => <div className="audit-entry" key={`${entry.time}-${entry.action}`}><span className={`audit-marker is-${entry.tone}`} /><time>{entry.time}</time><div><strong>{entry.action}</strong><span>{entry.detail}</span></div><small>{entry.actor}</small></div>)}</div>
+          </section>
+
+          <section className="panel report-panel animate-in delay-4" id="incident-report">
+            <div className="section-heading"><div><span className="eyebrow">Evidence-linked RCA</span><h2>Incident report</h2></div><span className="count-badge">{report?.feedback_count ?? 0} feedback</span></div>
+            {report?.recommendation ? <div className="report-content"><p className="root-cause">{report.recommendation.cause}</p><div className="signal-row"><span>{report.recommendation.confidence_band} confidence</span><span>{report.recommendation.evidence_ids.length} evidence IDs</span><span>{report.recommendation.runbook_ids.length} runbook citation</span></div><p className="policy-reason">Uncertainty: {report.recommendation.uncertainty}</p>{report.validation && <p className="policy-reason">Validation: {report.validation.status} · {report.validation.checks.join(" · ")}</p>}{report.execution?.external_reference && <p className="policy-reason">External reference: {report.execution.external_reference}</p>}</div> : <p className="muted-label">Report becomes available after investigation.</p>}
+            <div className="feedback-form"><input aria-label="Operator feedback" onChange={(event) => setFeedbackText(event.target.value)} placeholder="Add an operator correction" value={feedbackText} /><button className="secondary-button" disabled={!feedbackText.trim()} onClick={() => void submitFeedback()} type="button">Record feedback</button></div>
           </section>
 
           <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />Fixture mode · sanitized evidence only</span><span>PipelinePilot v0.3 · governed by policy</span></footer>
