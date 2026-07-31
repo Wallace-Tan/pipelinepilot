@@ -139,6 +139,8 @@ class PolicyRule(StrictContract):
     risk: RiskLevel
     decision: PolicyDecisionType
     required_approver_role: ActorRole | None = None
+    minimum_severity: RiskLevel | None = None
+    max_retry_count: int | None = Field(default=None, ge=0)
     reasons: list[str] = Field(min_length=1)
 
 

@@ -13,6 +13,8 @@
       "risk": "high",
       "decision": "approval_required",
       "required_approver_role": "operator",
+      "minimum_severity": "high",
+      "max_retry_count": 0,
       "reasons": [
         "Recovery changes downstream model execution state.",
         "Operator approval must be bound to the proposed execution."
@@ -26,6 +28,7 @@
       "risk": "low",
       "decision": "allow",
       "required_approver_role": null,
+      "max_retry_count": 0,
       "reasons": [
         "Read-only fixture evidence collection does not mutate external systems."
       ]

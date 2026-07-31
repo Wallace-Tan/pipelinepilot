@@ -21,6 +21,13 @@ ROLE_RANK = {
     ActorRole.ADMIN: 2,
 }
 
+SEVERITY_RANK = {
+    RiskLevel.LOW: 0,
+    RiskLevel.MEDIUM: 1,
+    RiskLevel.HIGH: 2,
+    RiskLevel.CRITICAL: 3,
+}
+
 
 class PolicyEngine:
     def __init__(self, policy: PolicyDocument | None, invalid_reason: str | None = None) -> None:
@@ -54,7 +61,12 @@ class PolicyEngine:
             (
                 rule
                 for rule in self.policy.rules
-                if rule.action == action and rule.environment is incident.mode
+                if (
+                    rule.action == action
+                    and rule.environment is incident.mode
+                    and (rule.minimum_severity is None or SEVERITY_RANK[incident.severity] >= SEVERITY_RANK[rule.minimum_severity])
+                    and (rule.max_retry_count is None or retry_count <= rule.max_retry_count)
+                )
             ),
             None,
         )
