@@ -73,9 +73,11 @@ Dependency rule: `api → services → domain`; services may depend on interface
 | Validation | Check expected recovery signals | execution/incident ID | pass/fail checks | dbt/metadata/monitoring | report partial/failed validation; do not close incident |
 | Incident report | Render RCA | incident + audit + evidence | structured report | templates | mark unavailable evidence explicitly |
 
+Context skills use versioned contracts with a `SkillContext` input and `SkillResult` output. Results carry a normalized `Evidence` value when available, an `AVAILABLE`/`DEGRADED`/`UNAVAILABLE` status, adapter mode, and a safe degradation reason. Fixture adapters implement the same boundary as future read-only Airflow or Snowflake adapters.
+
 ## CoCo Orchestration Flow
 
-1. Incident service calls monitoring, logs, dbt, and metadata skills concurrently where possible.
+1. Incident service calls monitoring, logs, dbt, and metadata skills concurrently with bounded timeouts.
 2. Redaction service sanitizes all returned text and stores a redaction summary.
 3. Knowledge skill retrieves filtered documents using failure signature, pipeline, and tags.
 4. CoCo receives only sanitized, typed evidence plus document citations and chooses/summarizes a recommendation using the Decision skill contract.

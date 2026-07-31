@@ -1,6 +1,6 @@
 ﻿# PipelinePilot
 
-PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. Milestone 2 includes the Milestone 1 scaffold plus SQLite persistence, fixture-mode request identity/RBAC, and recursive evidence redaction.
+PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. Milestone 3 includes typed context skills, fixture adapters, concurrent investigation, SQLite persistence, fixture-mode request identity/RBAC, and recursive evidence redaction.
 
 ## Prerequisites
 
@@ -47,6 +47,8 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
 Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbooks live under `data/runbooks`, and the immutable fixture policy is `data/policies/demo_policy.json`.
 
 No real Airflow, dbt, Snowflake, CoCo, or recovery behavior is implemented; external integrations remain fixture-only.
+
+Milestone 3 investigation is service-level and uses the monitoring, Airflow-log, dbt, and Snowflake-metadata fixtures. A future read-only live adapter must use the same skill boundary; fixture mode remains the selected fallback.
 
 ## Fixture-mode security
 

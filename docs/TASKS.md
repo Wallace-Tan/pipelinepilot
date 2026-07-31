@@ -20,11 +20,11 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 3 — Context Skills
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- | --- |
-| PP-007 | Skill contracts and fixture adapters | Implement typed skill interface plus fixture monitoring/log/dbt/metadata adapters. | PP-002, PP-003 | P0 / 6h | Each returns normalized evidence and degraded status. | `feat(skills): add context adapters` / `feat/pp-007-context-skills` |
-| PP-008 | Investigation workflow | Run context skills, redact output, persist evidence/audit events. | PP-004, PP-006, PP-007 | P0 / 5h | An incident reaches `INVESTIGATED` with evidence timeline. | `feat(incidents): orchestrate investigation` / `feat/pp-008-investigation` |
-| PP-009 | Read-only live adapter spike | Validate one Snowflake or Airflow read-only adapter behind the same interface. | PP-007 | P1 / 4h | Connector works or a documented fallback remains selected. | `feat(integrations): spike read-only connector` / `feat/pp-009-live-adapter-spike` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-007 | Achieved | Skill contracts and fixture adapters | Implement typed skill interface plus fixture monitoring/log/dbt/metadata adapters. | PP-002, PP-003 | P0 / 6h | Each returns normalized evidence and degraded status. | `feat(skills): add context adapters` / `feat/pp-007-context-skills` |
+| PP-008 | Achieved | Investigation workflow | Run context skills, redact output, persist evidence/audit events. | PP-004, PP-006, PP-007 | P0 / 5h | An incident reaches `INVESTIGATED` with evidence timeline. | `feat(incidents): orchestrate investigation` / `feat/pp-008-investigation` |
+| PP-009 | Fallback selected | Read-only live adapter spike | Validate one Snowflake or Airflow read-only adapter behind the same interface. | PP-007 | P1 / 4h | Connector works or a documented fallback remains selected. | `feat(integrations): spike read-only connector` / `feat/pp-009-live-adapter-spike` |
 
 ## Milestone 4 — Knowledge and CoCo Decision
 
