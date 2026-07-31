@@ -46,9 +46,9 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
 
 Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbooks live under `data/runbooks`, and the immutable fixture policy is `data/policies/demo_policy.json`.
 
-No real Airflow, dbt, Snowflake, CoCo, or recovery behavior is implemented; external integrations remain fixture-only.
+No real Airflow, dbt, Snowflake, CoCo, or recovery behavior is connected; external integrations remain fixture-only.
 
-Milestone 5 adds deterministic policy evaluation, fingerprint-bound approvals, idempotent fixture recovery, and validation-gated incident transitions. Milestone 3 investigation remains service-level and uses the monitoring, Airflow-log, dbt, and Snowflake-metadata fixtures. No live recovery integration is enabled.
+Milestone 6 adds the `/v1` incident lifecycle API and connects the dashboard to persisted fixture-mode state. Milestone 4 provides deterministic runbook retrieval and recommendation validation; Milestone 5 provides policy evaluation, fingerprint-bound approvals, idempotent fixture recovery, and validation-gated transitions. No live integration or recovery write is enabled.
 
 ## Fixture-mode security
 

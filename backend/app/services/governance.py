@@ -59,9 +59,10 @@ def build_execution_proposal(
     evidence_ids: list[str] | None = None,
 ) -> ExecutionProposal:
     selected_evidence_ids = list(evidence_ids if evidence_ids is not None else incident.evidence_ids)
+    proposal_id = "execution-proposal-" + "".join(character if character.isalnum() or character in "_.:-" else "-" for character in idempotency_key)
     return ExecutionProposal(
         schema_version="execution_proposal.v1",
-        id=f"execution-proposal-{uuid4().hex}",
+        id=proposal_id,
         incident_id=incident.id,
         action=action,
         idempotency_key=idempotency_key,

@@ -6,8 +6,10 @@ from app.domain.contracts import (
     Approval,
     AuditEvent,
     Evidence,
+    Feedback,
     Incident,
     PolicyDocument,
+    Recommendation,
     RecoveryExecution,
 )
 from app.persistence.database import json_text
@@ -59,6 +61,17 @@ class IncidentRepository:
             }
         )
 
+    def list(self, *, status: str | None = None, severity: str | None = None, pipeline: str | None = None, mode: str | None = None) -> list[Incident]:
+        clauses: list[str] = []
+        values: list[str] = []
+        for column, value in (("status", status), ("severity", severity), ("pipeline_name", pipeline), ("mode", mode)):
+            if value is not None:
+                clauses.append(f"{column} = ?")
+                values.append(value)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self.connection.execute(f"SELECT id FROM incidents{where} ORDER BY detected_at DESC", values).fetchall()
+        return [incident for row in rows if (incident := self.get(row["id"])) is not None]
+
 
 class EvidenceRepository:
     def __init__(self, connection: sqlite3.Connection) -> None:
@@ -85,6 +98,16 @@ class EvidenceRepository:
         )
         self.connection.commit()
 
+    def list_for_incident(self, incident_id: str) -> list[Evidence]:
+        import json
+        rows = self.connection.execute("SELECT * FROM incident_evidence WHERE incident_id = ? ORDER BY collected_at", (incident_id,)).fetchall()
+        return [Evidence.model_validate({
+            "schema_version": row["schema_version"], "id": row["id"], "incident_id": row["incident_id"],
+            "source": row["source"], "evidence_type": row["evidence_type"], "mode": row["mode"],
+            "summary": row["summary"], "sanitized_payload": json.loads(row["sanitized_payload_json"]),
+            "citations": json.loads(row["citations_json"]), "collected_at": row["collected_at"],
+        }) for row in rows]
+
 
 class PolicyRepository:
     def __init__(self, connection: sqlite3.Connection) -> None:
@@ -105,6 +128,10 @@ class PolicyRepository:
             ),
         )
         self.connection.commit()
+
+    def get_current(self) -> PolicyDocument | None:
+        row = self.connection.execute("SELECT document_json FROM policies ORDER BY version DESC LIMIT 1").fetchone()
+        return PolicyDocument.model_validate(__import__("json").loads(row["document_json"])) if row else None
 
 
 class ExecutionRepository:
@@ -157,6 +184,16 @@ class ExecutionRepository:
             }
         )
 
+    def get(self, execution_id: str) -> RecoveryExecution | None:
+        row = self.connection.execute("SELECT * FROM execution_history WHERE id = ?", (execution_id,)).fetchone()
+        if row is None:
+            return None
+        return self.get_by_idempotency_key(row["idempotency_key"])
+
+    def list_for_incident(self, incident_id: str) -> list[RecoveryExecution]:
+        rows = self.connection.execute("SELECT id FROM execution_history WHERE incident_id = ? ORDER BY created_at", (incident_id,)).fetchall()
+        return [execution for row in rows if (execution := self.get(row["id"])) is not None]
+
 
 class ApprovalRepository:
     def __init__(self, connection: sqlite3.Connection) -> None:
@@ -202,6 +239,10 @@ class ApprovalRepository:
             }
         )
 
+    def list_for_incident(self, incident_id: str) -> list[Approval]:
+        rows = self.connection.execute("SELECT id FROM approvals WHERE incident_id = ? ORDER BY created_at", (incident_id,)).fetchall()
+        return [approval for row in rows if (approval := self.get(row["id"])) is not None]
+
 
 class AuditRepository:
     def __init__(self, connection: sqlite3.Connection) -> None:
@@ -226,3 +267,48 @@ class AuditRepository:
             ),
         )
         self.connection.commit()
+
+    def list(self, *, incident_id: str | None = None, execution_id: str | None = None, actor_role: str | None = None, action: str | None = None, date_from: str | None = None, date_to: str | None = None) -> list[AuditEvent]:
+        clauses: list[str] = []
+        values: list[str] = []
+        for column, value in (("incident_id", incident_id), ("execution_id", execution_id), ("actor_role", actor_role), ("action", action), ("created_at >=", date_from), ("created_at <=", date_to)):
+            if value is not None:
+                operator = " =" if " " not in column else " " + column.split(" ", 1)[1]
+                field = column.split(" ", 1)[0]
+                clauses.append(f"{field}{operator} ?")
+                values.append(value)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self.connection.execute(f"SELECT * FROM audit_logs{where} ORDER BY created_at", values).fetchall()
+        return [AuditEvent.model_validate({
+            "schema_version": row["schema_version"] if "schema_version" in row.keys() else "audit_event.v1",
+            "id": row["id"], "correlation_id": row["correlation_id"], "incident_id": row["incident_id"],
+            "execution_id": row["execution_id"], "actor_role": row["actor_role"], "action": row["action"],
+            "outcome": row["outcome"], "latency_ms": row["latency_ms"], "created_at": row["created_at"],
+        }) for row in rows]
+
+
+class RecommendationRepository:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+
+    def save(self, recommendation: Recommendation) -> None:
+        from datetime import datetime, timezone
+        self.connection.execute("INSERT OR REPLACE INTO recommendations (id, incident_id, document_json, created_at) VALUES (?, ?, ?, ?)", (recommendation.id, recommendation.incident_id, recommendation.model_dump_json(), datetime.now(timezone.utc).isoformat()))
+        self.connection.commit()
+
+    def get_for_incident(self, incident_id: str) -> Recommendation | None:
+        row = self.connection.execute("SELECT document_json FROM recommendations WHERE incident_id = ? ORDER BY created_at DESC LIMIT 1", (incident_id,)).fetchone()
+        return Recommendation.model_validate(__import__("json").loads(row["document_json"])) if row else None
+
+
+class FeedbackRepository:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+
+    def save(self, feedback: Feedback) -> None:
+        self.connection.execute("INSERT INTO feedback (id, incident_id, actor_id, correction, outcome, created_at) VALUES (?, ?, ?, ?, ?, ?)", (feedback.id, feedback.incident_id, feedback.actor_id, feedback.correction, feedback.outcome, feedback.created_at.isoformat()))
+        self.connection.commit()
+
+    def count_for_incident(self, incident_id: str) -> int:
+        row = self.connection.execute("SELECT COUNT(*) AS count FROM feedback WHERE incident_id = ?", (incident_id,)).fetchone()
+        return int(row["count"])

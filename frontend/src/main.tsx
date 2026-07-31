@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./styles.css";
@@ -40,6 +40,28 @@ type AuditEntry = {
   actor: string;
   tone: "neutral" | "success" | "warning";
 };
+
+type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
+type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; collected_at: string; citations: { title: string; section: string }[] };
+type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
+
+const API_INCIDENT_ID = "inc-retail-orders-20260723";
+const API_HEADERS = { "X-Actor-Id": "operator-demo", "X-Actor-Role": "operator", "Content-Type": "application/json" };
+
+async function fetchIncident(): Promise<ApiDetail> {
+  const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}`);
+  if (!response.ok) throw new Error("Incident API is unavailable.");
+  return response.json() as Promise<ApiDetail>;
+}
+
+function mapIncident(value: ApiIncident) {
+  return { pipeline: value.pipeline_name, runId: value.run_id, status: value.status.replace(/\b\w/g, (letter) => letter.toUpperCase()), severity: value.severity.replace(/\b\w/g, (letter) => letter.toUpperCase()), detected: new Date(value.detected_at).toLocaleString(), mode: value.mode };
+}
+
+function mapEvidence(value: ApiEvidence): EvidenceViewModel {
+  const sourceLabel = value.source.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return { id: value.id, source: value.source, sourceLabel, status: value.source === "snowflake_metadata" ? "degraded" : "available", summary: value.summary, detail: value.summary, timestamp: new Date(value.collected_at).toLocaleTimeString(), metadata: value.evidence_type, citation: value.citations[0] ? `${value.citations[0].title} · ${value.citations[0].section}` : undefined };
+}
 
 type IconName =
   | "activity"
@@ -160,10 +182,45 @@ function App() {
   const [filter, setFilter] = useState<EvidenceFilter>("all");
   const [expandedEvidence, setExpandedEvidence] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [liveIncident, setLiveIncident] = useState(incident);
+  const [liveEvidence, setLiveEvidence] = useState<EvidenceViewModel[]>(evidence);
+  const [liveAudit, setLiveAudit] = useState<AuditEntry[]>(audit);
+  const [livePolicy, setLivePolicy] = useState(policy);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const detail = await fetchIncident();
+      setLiveIncident(mapIncident(detail.incident));
+      setLiveEvidence(detail.evidence.map(mapEvidence));
+      setLiveAudit(detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" : "neutral" })));
+      if (detail.recommendation) setLivePolicy({ decision: "Approval required", risk: "High", reason: detail.recommendation.uncertainty, action: detail.recommendation.recommended_action });
+      setApiError(null);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Unable to load incident data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void refresh(); }, []);
+
+  const runAction = async (path: string, body?: object, key = "ui-schema-drift-recovery") => {
+    try {
+      const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/${path}`, { method: "POST", headers: { ...API_HEADERS, "Idempotency-Key": key }, body: body ? JSON.stringify(body) : undefined });
+      if (!response.ok) throw new Error("The server rejected this governed action.");
+      await refresh();
+      setNotice("Fixture-mode action completed and the incident view was refreshed.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Action failed.");
+    }
+  };
 
   const filteredEvidence = useMemo(
-    () => evidence.filter((item) => filter === "all" || item.status === filter),
-    [filter],
+    () => liveEvidence.filter((item) => filter === "all" || item.status === filter),
+    [filter, liveEvidence],
   );
 
   const focusWorkflow = (step: WorkflowStep) => {
@@ -214,14 +271,14 @@ function App() {
         <div className="content-wrap">
           <section className="incident-header animate-in" id="incident-overview">
             <div>
-              <div className="eyebrow-row"><span className="eyebrow">Active incident</span><span className="badge badge-warning"><span className="signal-dot" />{incident.severity} severity</span></div>
-              <h1>{incident.pipeline}</h1>
+              <div className="eyebrow-row"><span className="eyebrow">Active incident</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} severity</span></div>
+              <h1>{liveIncident.pipeline}</h1>
               <p className="subhead">Daily retail orders load failed after an upstream schema change.</p>
-              <div className="incident-meta"><span><Icon name="terminal" size={14} />{incident.runId}</span><span><Icon name="database" size={14} />Detected {incident.detected}</span></div>
+              <div className="incident-meta"><span><Icon name="terminal" size={14} />{liveIncident.runId}</span><span><Icon name="database" size={14} />Detected {liveIncident.detected}</span></div>
             </div>
             <div className="incident-state">
               <span className="eyebrow">Current state</span>
-              <div className="state-value"><span className="state-pulse" />{incident.status}</div>
+              <div className="state-value"><span className="state-pulse" />{liveIncident.status}</div>
               <button className="text-action" onClick={() => setNotice("The action is intentionally gated by the deterministic policy engine.")} type="button">Why is this blocked? <Icon name="arrow" size={14} /></button>
             </div>
           </section>
@@ -241,7 +298,7 @@ function App() {
 
           <div className="content-grid">
             <section className="panel evidence-panel animate-in delay-2" id="evidence-workspace">
-              <div className="section-heading section-heading-wrap"><div><span className="eyebrow">Investigation context</span><h2>Evidence collected</h2></div><span className="count-badge">{filteredEvidence.length} / {evidence.length}</span></div>
+              <div className="section-heading section-heading-wrap"><div><span className="eyebrow">Investigation context</span><h2>Evidence collected</h2></div><span className="count-badge">{filteredEvidence.length} / {liveEvidence.length}</span></div>
               <div className="filter-row" aria-label="Evidence filters">
                 {(["all", "available", "degraded"] as EvidenceFilter[]).map((option) => <button className={`filter-button ${filter === option ? "is-active" : ""}`} key={option} onClick={() => setFilter(option)} type="button">{option === "all" ? "All sources" : option === "available" ? "Available" : "Degraded"}</button>)}
                 <span className="filter-note"><Icon name="shield" size={13} />Redacted before persistence</span>
@@ -261,10 +318,18 @@ function App() {
             <aside className="side-stack">
               <section className="panel decision-panel animate-in delay-3" id="decision-panel">
                 <div className="section-heading"><div><span className="eyebrow">Governance gate</span><h2>Policy posture</h2></div><Icon name="lock" size={18} /></div>
-                <div className="policy-decision"><div><span className="eyebrow">Decision</span><strong>{policy.decision}</strong></div><span className="badge badge-warning">{policy.risk} risk</span></div>
-                <div className="policy-action"><span className="eyebrow">Proposed action</span><p>{policy.action}</p></div>
-                <p className="policy-reason">{policy.reason}</p>
-                <button className="secondary-button" onClick={() => setNotice(policy.reason)} type="button"><Icon name="shield" size={15} />Explain policy gate</button>
+                <div className="policy-decision"><div><span className="eyebrow">Decision</span><strong>{livePolicy.decision}</strong></div><span className="badge badge-warning">{livePolicy.risk} risk</span></div>
+                <div className="policy-action"><span className="eyebrow">Proposed action</span><p>{livePolicy.action}</p></div>
+                <p className="policy-reason">{livePolicy.reason}</p>
+                <button className="secondary-button" onClick={() => setNotice(livePolicy.reason)} type="button"><Icon name="shield" size={15} />Explain policy gate</button>
+                <div className="fixture-actions">
+                  {loading && <span className="muted-label">Loading live incident state…</span>}
+                  {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
+                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">Investigate fixture incident</button>}
+                  {!loading && liveIncident.status === "Investigated" && <button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button>}
+                  {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
+                  {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
+                </div>
                 <div className="preview-note"><span className="signal-dot is-amber" /><span>Recovery controls appear here after the API and approval workflow are connected.</span></div>
               </section>
               <section className="panel recommendation-panel animate-in delay-4">
@@ -277,7 +342,7 @@ function App() {
 
           <section className="panel audit-panel animate-in delay-4" id="audit-timeline">
             <div className="section-heading"><div><span className="eyebrow">Traceability</span><h2>Audit timeline</h2></div><button className="text-action" onClick={() => setNotice("Full audit filtering will be available with the Milestone 6 API.")} type="button">View full log <Icon name="arrow" size={14} /></button></div>
-            <div className="audit-list">{audit.map((entry) => <div className="audit-entry" key={`${entry.time}-${entry.action}`}><span className={`audit-marker is-${entry.tone}`} /><time>{entry.time}</time><div><strong>{entry.action}</strong><span>{entry.detail}</span></div><small>{entry.actor}</small></div>)}</div>
+            <div className="audit-list">{liveAudit.map((entry) => <div className="audit-entry" key={`${entry.time}-${entry.action}`}><span className={`audit-marker is-${entry.tone}`} /><time>{entry.time}</time><div><strong>{entry.action}</strong><span>{entry.detail}</span></div><small>{entry.actor}</small></div>)}</div>
           </section>
 
           <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />Fixture mode · sanitized evidence only</span><span>PipelinePilot v0.3 · governed by policy</span></footer>

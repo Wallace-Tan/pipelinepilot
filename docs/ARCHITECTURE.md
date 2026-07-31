@@ -156,6 +156,8 @@ Rules match action, environment, incident severity, retry count, and role. They 
 
 Milestone 5 uses a deterministic fixture recovery path. Execution proposals carry a SHA-256 request fingerprint over the incident snapshot, action, policy decision/version, and evidence IDs. Approval creates a planned execution record before binding the approval. Recovery requires the matching approval and idempotency key, then moves through `EXECUTING` and `RECOVERED`; validation alone may move the incident to `VALIDATED`. Failed or blocked records remain persisted and auditable.
 
+Milestone 6 exposes these services through a FastAPI application factory. API dependencies provide SQLite repositories, fixture-header identity, role authorization, correlation IDs, and idempotency keys. Responses use typed `/v1` contracts; failures return a safe error envelope and never expose raw fixture payloads or credentials. The React dashboard reads incident detail from the API and presents investigation, approval, recovery, validation, report, and feedback controls as fixture-mode operations.
+
 ## Future Scaling
 
 Replace fixture adapters with queued workers and production connectors; move state to Postgres/Snowflake, documents to governed storage/Cortex Search, and audit to a tamper-evident event stream. Add SSO, tenant/environment boundaries, distributed idempotency, connector health checks, approval delegation, evaluation datasets, and observability for skill latency and decision quality. Keep the skill contracts and deterministic policy engine unchanged.

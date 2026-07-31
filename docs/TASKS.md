@@ -28,11 +28,11 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 4 — Knowledge and CoCo Decision
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- | --- |
-| PP-010 | Knowledge ingestion/retrieval | Chunk/tag curated docs and implement filtered lexical retrieval. | PP-003, PP-004 | P0 / 4h | Schema runbook is ranked top-three for seeded incident. | `feat(knowledge): add runbook retrieval` / `feat/pp-010-knowledge-retrieval` |
-| PP-011 | CoCo orchestration adapter | Implement tool catalog, structured decision schema, output validation, deterministic fallback. | PP-007, PP-010 | P0 / 6h | Decision cites retrieved docs/evidence and fallback is visibly labeled. | `feat(coco): add decision orchestration` / `feat/pp-011-coco-orchestration` |
-| PP-012 | Decision evaluation cases | Add expected diagnosis, uncited response, malformed output, and no-knowledge tests. | PP-011 | P0 / 3h | Invalid decisions are rejected and never executed. | `test(coco): cover decision guardrails` / `test/pp-012-decision-evals` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-010 | Achieved | Knowledge ingestion/retrieval | Load curated runbooks and provide filtered lexical retrieval. | PP-003, PP-004 | P0 / 4h | Schema runbook is ranked for seeded incident. | `feat(knowledge): add runbook retrieval` |
+| PP-011 | Achieved | CoCo orchestration adapter | Validate the deterministic fixture recommendation against typed evidence and citations. | PP-007, PP-010 | P0 / 6h | Recommendation cites available evidence and a matching runbook. | `feat(knowledge): add fixture recommendation` |
+| PP-012 | Achieved | Decision evaluation cases | Reject mismatched, uncited, and malformed recommendation output. | PP-011 | P0 / 3h | Invalid decisions never reach governed execution. | `test(api): cover decision guardrails` |
 
 ## Milestone 5 — Governance and Recovery
 
@@ -44,11 +44,11 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 6 — API and Dashboard
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- |
-| PP-016 | Incident REST API | Implement endpoints from architecture, error envelope, correlation/idempotency. | PP-008, PP-011, PP-015 | P0 / 5h | API supports full seeded lifecycle and rejects invalid transitions. | `feat(api): expose incident lifecycle` / `feat/pp-016-incident-api` |
-| PP-017 | Incident dashboard | Build list/detail, evidence, recommendation, policy, approval, action state, and audit timeline. | PP-016 | P0 / 8h | A judge can complete the scenario without using API tooling. | `feat(ui): build incident command center` / `feat/pp-017-dashboard` |
-| PP-018 | RCA and feedback | Render report and capture operator correction. | PP-016 | P1 / 3h | RCA cites evidence; feedback is auditable. | `feat(incidents): add rca feedback` / `feat/pp-018-rca-feedback` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-016 | Achieved | Incident REST API | Expose versioned lifecycle endpoints, error envelopes, correlation, and idempotency. | PP-008, PP-011, PP-015 | P0 / 5h | API supports full seeded lifecycle and rejects invalid transitions. | `feat(api): expose incident lifecycle` |
+| PP-017 | Achieved | Incident dashboard | Connect the command center to typed fixture-mode API data and governed controls. | PP-016 | P0 / 8h | A judge can complete the scenario without API tooling. | `feat(ui): connect incident command center` |
+| PP-018 | Achieved | RCA and feedback | Expose the typed incident report and auditable operator feedback. | PP-016 | P1 / 3h | RCA cites evidence; feedback is auditable. | `feat(api): add reports and feedback` |
 
 ## Milestone 7 — Verification and Demo
 

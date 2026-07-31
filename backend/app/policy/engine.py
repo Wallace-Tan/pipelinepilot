@@ -63,7 +63,7 @@ class PolicyEngine:
         if ROLE_RANK[actor_role] < ROLE_RANK[matching_rule.minimum_role]:
             return PolicyDecision(
                 schema_version="policy_decision.v1",
-                id=self._decision_id(),
+                id=self._decision_id(action),
                 policy_version=self.policy.version,
                 action=action,
                 decision=PolicyDecisionType.DENY,
@@ -77,7 +77,7 @@ class PolicyEngine:
             )
         return PolicyDecision(
             schema_version="policy_decision.v1",
-            id=self._decision_id(),
+            id=self._decision_id(action),
             policy_version=self.policy.version,
             action=action,
             decision=matching_rule.decision,
@@ -90,7 +90,7 @@ class PolicyEngine:
     def _deny(self, action: str, reason: str) -> PolicyDecision:
         return PolicyDecision(
             schema_version="policy_decision.v1",
-            id=self._decision_id(),
+            id=self._decision_id(action),
             policy_version=self.policy.version if self.policy else "invalid",
             action=action,
             decision=self.policy.default_decision if self.policy else PolicyDecisionType.DENY,
@@ -98,6 +98,7 @@ class PolicyEngine:
             reasons=[reason],
         )
 
-    @staticmethod
-    def _decision_id() -> str:
-        return f"policy-decision-{uuid4().hex}"
+    def _decision_id(self, action: str) -> str:
+        version = self.policy.version if self.policy else "invalid"
+        safe_action = "".join(character if character.isalnum() or character in "_.:-" else "-" for character in action)
+        return f"policy-decision-{version}-{safe_action}"

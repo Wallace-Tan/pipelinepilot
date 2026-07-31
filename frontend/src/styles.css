@@ -116,6 +116,7 @@ h2 { color: var(--ink); font-size: 15px; letter-spacing: -.015em; }
 .filter-button:hover { color: var(--ink); background: var(--surface-2); }
 .filter-button.is-active { color: var(--ink); background: var(--surface-3); }
 .filter-note { gap: 5px; color: var(--emerald); font-size: 10px; margin-left: auto; }
+.fixture-actions { display: grid; gap: 8px; margin-top: 14px; }
 .evidence-list { display: grid; gap: 8px; margin-top: 14px; }
 .evidence-card { overflow: hidden; border: 1px solid var(--hairline); border-radius: 7px; background: var(--surface-2); transition: border-color 200ms ease, background 200ms ease, transform 200ms ease; }
 .evidence-card:hover, .evidence-card.is-expanded { border-color: var(--hairline-strong); background: var(--surface-2); }

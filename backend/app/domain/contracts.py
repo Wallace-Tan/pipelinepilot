@@ -214,6 +214,16 @@ class ValidationResult(StrictContract):
     failure_reason: str | None = Field(default=None, max_length=500)
 
 
+class Feedback(StrictContract):
+    schema_version: Literal["feedback.v1"]
+    id: SafeId
+    incident_id: SafeId
+    actor_id: SafeId
+    correction: str = Field(min_length=1, max_length=1000)
+    outcome: str = Field(min_length=1, max_length=240)
+    created_at: datetime
+
+
 class AuditEvent(StrictContract):
     schema_version: Literal["audit_event.v1"]
     id: SafeId
