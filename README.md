@@ -1,6 +1,6 @@
 ﻿# PipelinePilot
 
-PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. Milestone 1 includes a FastAPI backend, strict versioned domain contracts, a Vite React dashboard shell, and sanitized fixture/runbook data.
+PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. Milestone 2 includes the Milestone 1 scaffold plus SQLite persistence, fixture-mode request identity/RBAC, and recursive evidence redaction.
 
 ## Prerequisites
 
@@ -46,6 +46,10 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
 
 Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbooks live under `data/runbooks`, and the immutable fixture policy is `data/policies/demo_policy.json`.
 
-No real Airflow, dbt, Snowflake, CoCo, persistence, authentication, or recovery behavior is implemented in Milestone 1.
+No real Airflow, dbt, Snowflake, CoCo, or recovery behavior is implemented; external integrations remain fixture-only.
+
+## Fixture-mode security
+
+Requests may provide `X-Actor-Id` and `X-Actor-Role` headers with `viewer`, `operator`, or `admin`. Missing identity headers default to the read-only `anonymous-viewer` identity. The backend stores sanitized evidence and rejects unsupported roles or unauthorized transitions.
 
 

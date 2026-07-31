@@ -122,6 +122,8 @@ sequenceDiagram
 
 All mutation endpoints use request IDs/idempotency keys, return `correlation_id`, and reject unauthorized transitions with machine-readable errors.
 
+In fixture mode, request identity is supplied through `X-Actor-Id` and `X-Actor-Role` headers. Missing headers resolve to a read-only Viewer identity; authorization is enforced by reusable server-side dependencies rather than UI state.
+
 ## Database Design
 
 | Table | Key fields |
@@ -136,7 +138,7 @@ All mutation endpoints use request IDs/idempotency keys, return `correlation_id`
 | `knowledge_chunks` | `id`, document ID, text, metadata, optional embedding reference |
 | `execution_history` | `id`, incident ID, action, idempotency key, policy/approval IDs, status, external ref, timestamps |
 
-Use foreign keys, immutable append-only audit records, and indexes on incident status, pipeline/run IDs, and knowledge tags. Store raw sensitive logs outside the application store—or not at all in the MVP.
+Use foreign keys, immutable append-only audit records, and indexes on incident status, pipeline/run IDs, and knowledge tags. The MVP uses SQLite migrations and typed repositories. Store raw sensitive logs outside the application store—or not at all in the MVP.
 
 ## Security Architecture
 

@@ -4,19 +4,19 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 1 — Foundation
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- | --- |
-| PP-001 | Scaffold applications | Create backend/frontend structure, configuration, and local docs. | — | P0 / 3h | Apps start with documented, verified commands. | `chore: scaffold application` / `chore/pp-001-scaffold` |
-| PP-002 | Domain contracts | Define incident, evidence, action, policy, approval, execution, and audit schemas/enums. | PP-001 | P0 / 4h | Contracts validate happy and invalid payloads. | `feat(domain): add incident contracts` / `feat/pp-002-domain-contracts` |
-| PP-003 | Seed demo dataset | Add sanitized retail schema-drift fixtures, three runbooks, policy, and expected outcomes. | PP-002 | P0 / 3h | Fixture data has no PII and reproduces one failure. | `feat(demo): add schema drift fixtures` / `feat/pp-003-demo-fixtures` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-001 | Achieved | Scaffold applications | Create backend/frontend structure, configuration, and local docs. | — | P0 / 3h | Apps start with documented, verified commands. | `chore: scaffold application` / `chore/pp-001-scaffold` |
+| PP-002 | Achieved | Domain contracts | Define incident, evidence, action, policy, approval, execution, and audit schemas/enums. | PP-001 | P0 / 4h | Contracts validate happy and invalid payloads. | `feat(domain): add incident contracts` / `feat/pp-002-domain-contracts` |
+| PP-003 | Achieved | Seed demo dataset | Add sanitized retail schema-drift fixtures, three runbooks, policy, and expected outcomes. | PP-002 | P0 / 3h | Fixture data has no PII and reproduces one failure. | `feat(demo): add schema drift fixtures` / `feat/pp-003-demo-fixtures` |
 
 ## Milestone 2 — State and Security
 
-| ID | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
-| --- | --- | --- | --- | --- | --- | --- |
-| PP-004 | Persistence and migrations | Implement repositories/tables from architecture. | PP-002 | P0 / 5h | Incident/audit/execution records persist with foreign keys. | `feat(store): add incident persistence` / `feat/pp-004-persistence` |
-| PP-005 | RBAC and request identity | Add Viewer/Operator/Admin authorization middleware. | PP-001 | P0 / 3h | Viewer cannot approve or execute; tests cover role matrix. | `feat(auth): enforce rbac` / `feat/pp-005-rbac` |
-| PP-006 | Redaction service | Detect configured email/card/identifier patterns and preserve redaction metadata. | PP-002 | P0 / 3h | No test PII reaches decision/retrieval payloads. | `feat(security): add evidence redaction` / `feat/pp-006-redaction` |
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-004 | Achieved | Persistence and migrations | Implement repositories/tables from architecture. | PP-002 | P0 / 5h | Incident/audit/execution records persist with foreign keys. | `feat(store): add incident persistence` / `feat/pp-004-persistence` |
+| PP-005 | Achieved | RBAC and request identity | Add Viewer/Operator/Admin authorization middleware. | PP-001 | P0 / 3h | Viewer cannot approve or execute; tests cover role matrix. | `feat(auth): enforce rbac` / `feat/pp-005-rbac` |
+| PP-006 | Achieved | Redaction service | Detect configured email/card/identifier patterns and preserve redaction metadata. | PP-002 | P0 / 3h | No test PII reaches decision/retrieval payloads. | `feat(security): add evidence redaction` / `feat/pp-006-redaction` |
 
 ## Milestone 3 — Context Skills
 
