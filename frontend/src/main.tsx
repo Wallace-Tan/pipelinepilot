@@ -47,6 +47,8 @@ type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendatio
 
 const API_INCIDENT_ID = "inc-retail-orders-20260723";
 const API_HEADERS = { "X-Actor-Id": "operator-demo", "X-Actor-Role": "operator", "Content-Type": "application/json" };
+const API_ADMIN_HEADERS = { "X-Actor-Id": "admin-demo", "X-Actor-Role": "admin", "Content-Type": "application/json" };
+type DemoStatus = { mode: string; fixture: string; database_ready: boolean; adapters: Record<string, string> };
 
 async function fetchIncident(): Promise<ApiDetail> {
   const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}`);
@@ -188,11 +190,14 @@ function App() {
   const [livePolicy, setLivePolicy] = useState(policy);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null);
 
   const refresh = async () => {
     setLoading(true);
     try {
-      const detail = await fetchIncident();
+      const [detail, statusResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status")]);
+      if (!statusResponse.ok) throw new Error("Demo readiness status is unavailable.");
+      setDemoStatus(await statusResponse.json() as DemoStatus);
       setLiveIncident(mapIncident(detail.incident));
       setLiveEvidence(detail.evidence.map(mapEvidence));
       setLiveAudit(detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" : "neutral" })));
@@ -206,6 +211,19 @@ function App() {
   };
 
   useEffect(() => { void refresh(); }, []);
+
+  const resetDemo = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/v1/demo/reset", { method: "POST", headers: API_ADMIN_HEADERS });
+      if (!response.ok) throw new Error("Admin fixture reset was rejected.");
+      await refresh();
+      setNotice("Fixture reset completed. The seeded incident is ready for a new walkthrough.");
+    } catch (error) {
+      setLoading(false);
+      setNotice(error instanceof Error ? error.message : "Fixture reset failed.");
+    }
+  };
 
   const runAction = async (path: string, body?: object, key = "ui-schema-drift-recovery") => {
     try {
@@ -264,11 +282,15 @@ function App() {
           <div className="breadcrumb"><span>Workspace</span><Icon name="chevron" size={13} /><strong>{activeNav}</strong></div>
           <div className="topbar-actions">
             <button className="topbar-button" onClick={() => setNotice("Global search will connect to incident and evidence APIs in Milestone 6.")} title="Search workspace" type="button"><Icon name="search" size={16} /><span>Search</span></button>
+            <button className="topbar-button" onClick={() => void resetDemo()} title="Admin-only fixture reset" type="button">Reset fixture</button>
             <button className="icon-button" onClick={() => setNotice("All fixture adapters are responding. Snowflake metadata is marked degraded by design.")} title="System health" type="button"><span className="status-dot is-emerald" /><Icon name="activity" size={16} /></button>
           </div>
         </header>
 
         <div className="content-wrap">
+          {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
+          {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
+          {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · Snowflake metadata degraded by design</div>}
           <section className="incident-header animate-in" id="incident-overview">
             <div>
               <div className="eyebrow-row"><span className="eyebrow">Active incident</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} severity</span></div>

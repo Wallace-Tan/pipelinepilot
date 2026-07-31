@@ -3,12 +3,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pathlib import Path
 
+from app.api.demo import router as demo_router
 from app.api.health import router as health_router
 from app.api.incidents import router as incident_router, ROOT
 from app.config.settings import get_settings
+from app.demo.seed import FixtureSeedService
 from app.persistence.database import Database
-from app.persistence.repositories import IncidentRepository, PolicyRepository
-from app.domain.contracts import Incident, PolicyDocument
 
 
 def create_app() -> FastAPI:
@@ -17,9 +17,11 @@ def create_app() -> FastAPI:
     database = Database(settings.database_path)
     connection = database.connect()
     app.state.resources = type("Resources", (), {"settings": settings, "database": database, "connection": connection})()
-    _seed_fixture(connection)
+    app.state.root = ROOT
+    FixtureSeedService(ROOT).seed(connection)
     app.include_router(health_router)
     app.include_router(incident_router)
+    app.include_router(demo_router)
 
     @app.middleware("http")
     async def correlation_header(request: Request, call_next):
@@ -37,13 +39,6 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=422, content={"error": {"code": "validation_error", "message": "The request payload is invalid.", "correlation_id": request.headers.get("X-Correlation-ID", "corr-api-validation")}})
 
     return app
-
-
-def _seed_fixture(connection) -> None:
-    incident = Incident.model_validate(__import__("json").loads((ROOT / "data/fixtures/schema_drift/incident.json").read_text(encoding="utf-8")))
-    IncidentRepository(connection).save(incident)
-    policy = PolicyDocument.model_validate(__import__("json").loads((ROOT / "data/policies/demo_policy.json").read_text(encoding="utf-8")))
-    PolicyRepository(connection).save(policy)
 
 
 app = create_app()

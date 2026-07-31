@@ -20,6 +20,12 @@ class Database:
         self.apply_migrations(connection)
         return connection
 
+    def reset_fixture(self, connection: sqlite3.Connection) -> sqlite3.Connection:
+        connection.close()
+        if str(self.path) != ":memory:" and self.path.exists():
+            self.path.unlink()
+        return self.connect()
+
     @staticmethod
     def apply_migrations(connection: sqlite3.Connection) -> None:
         connection.execute(

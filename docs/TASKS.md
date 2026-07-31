@@ -61,3 +61,5 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 ## Milestone 8 — Stretch (only after PP-021)
 
 PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow adapters (P2/8h), PP-024 incident similarity/feedback ranking (P2/6h), PP-025 Slack/Jira notification (P2/4h), PP-026 policy UI (P2/8h), and PP-027 multi-pipeline routing (P2/8h). Each must retain the contracts and guardrails established above.
+
+Milestone 7 status: PP-019, PP-020, and PP-021 are Achieved. Verification, reset/status resilience, replay tooling, and judge documentation are available in the repository.

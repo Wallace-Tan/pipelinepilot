@@ -158,6 +158,8 @@ Milestone 5 uses a deterministic fixture recovery path. Execution proposals carr
 
 Milestone 6 exposes these services through a FastAPI application factory. API dependencies provide SQLite repositories, fixture-header identity, role authorization, correlation IDs, and idempotency keys. Responses use typed `/v1` contracts; failures return a safe error envelope and never expose raw fixture payloads or credentials. The React dashboard reads incident detail from the API and presents investigation, approval, recovery, validation, report, and feedback controls as fixture-mode operations.
 
+Milestone 7 adds a fixture-only demo control plane. `GET /v1/demo/status` reports mode, seed, database, and adapter readiness. Admin-only `POST /v1/demo/reset` recreates the local fixture store and seeds the schema-drift incident; it is deliberately unavailable outside fixture mode. End-to-end tests exercise denial and happy paths, while the replay script provides a deterministic backup demonstration without browser state.
+
 ## Future Scaling
 
 Replace fixture adapters with queued workers and production connectors; move state to Postgres/Snowflake, documents to governed storage/Cortex Search, and audit to a tamper-evident event stream. Add SSO, tenant/environment boundaries, distributed idempotency, connector health checks, approval delegation, evaluation datasets, and observability for skill latency and decision quality. Keep the skill contracts and deterministic policy engine unchanged.

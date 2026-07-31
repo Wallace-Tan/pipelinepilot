@@ -41,6 +41,7 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation roadmap](docs/TASKS.md)
 - [Hackathon notes](docs/HACKATHON.md)
+- [Demo guide](docs/DEMO.md)
 
 ## Demo Data
 
@@ -49,6 +50,8 @@ Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbook
 No real Airflow, dbt, Snowflake, CoCo, or recovery behavior is connected; external integrations remain fixture-only.
 
 Milestone 6 adds the `/v1` incident lifecycle API and connects the dashboard to persisted fixture-mode state. Milestone 4 provides deterministic runbook retrieval and recommendation validation; Milestone 5 provides policy evaluation, fingerprint-bound approvals, idempotent fixture recovery, and validation-gated transitions. No live integration or recovery write is enabled.
+
+Milestone 7 adds the Admin-only fixture reset, demo readiness status, full lifecycle verification, API replay script, and judge walkthrough. Use `docs/DEMO.md` for the five-minute scenario and recovery instructions.
 
 ## Fixture-mode security
 

@@ -1,0 +1,7 @@
+{
+  "incident_id": "inc-retail-orders-20260723",
+  "final_status": "validated",
+  "feedback_count": 0,
+  "mode": "fixture",
+  "notes": "Elapsed time varies by machine; no credentials or raw sensitive values should appear."
+}

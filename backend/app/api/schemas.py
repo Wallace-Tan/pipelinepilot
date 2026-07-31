@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -86,3 +87,23 @@ class FeedbackResponse(BaseModel):
 class PolicyResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     policy: PolicyDocument
+
+
+class DemoStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["demo_status.v1"]
+    mode: str
+    fixture: Literal["schema_drift"]
+    incident_id: str
+    database_ready: bool
+    adapters: dict[str, str]
+
+
+class DemoResetResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["demo_reset.v1"]
+    incident_id: str
+    mode: str
+    fixture: Literal["schema_drift"]
+    reset_at: datetime
+    correlation_id: str

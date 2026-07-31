@@ -16,13 +16,13 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 
 **0:00–0:35 — Problem.** “A daily retail pipeline is failing. The normal workflow is logs, dbt, warehouse metadata, runbook, approvals, retry, validation, then an RCA. PipelinePilot makes that lifecycle governed and explainable.”
 
-**0:35–1:20 — Detection and investigation.** Open the seeded failed incident. Trigger investigation and show the timeline: monitoring, log signature, dbt failure, and read-only metadata. Point out the fixture/sandbox mode label if live integrations are not connected.
+**0:35–1:20 — Detection and investigation.** Open the seeded failed incident and click `Investigate fixture incident`. Show the timeline: monitoring, log signature, dbt failure, and intentionally degraded read-only metadata. Point out the persistent Fixture mode and adapter status labels.
 
-**1:20–2:10 — CoCo orchestration and knowledge.** Show the CoCo skill trace and retrieved schema-change runbook. Emphasize that only sanitized evidence and cited documents reach the reasoning step. Read the structured diagnosis: schema drift, high confidence band, evidence references, and a proposed controlled recovery.
+**1:20–2:10 — Recommendation and knowledge.** Show the typed deterministic fixture recommendation and retrieved schema-change runbook. Emphasize that only sanitized evidence and cited documents reach the reasoning boundary. Read the structured diagnosis: schema drift, high confidence band, evidence references, and a proposed controlled recovery.
 
 **2:10–3:05 — Governance.** Show policy result: risk and `APPROVAL_REQUIRED`. Attempting execution is unavailable. Explain that the model cannot override the deterministic rule or call Airflow directly.
 
-**3:05–4:00 — Human approval and recovery.** Sign in/use the Operator role to approve. Start the idempotent recovery through the Recovery skill. Show the audit event containing actor, action, policy version, and correlation ID.
+**3:05–4:00 — Human approval and recovery.** Use the Operator fixture identity to approve. Start the idempotent recovery through the Recovery skill. Show the audit event containing actor, action, policy version, correlation ID, and fixture reference.
 
 **4:00–4:40 — Validation and RCA.** Show validation checks passing and the incident report with evidence, timeline, impact, and next prevention step.
 
@@ -66,6 +66,7 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 ## Submission Checklist
 
 - A fresh reset produces the failing incident and completes the happy path.
+- `docs/DEMO.md` and `scripts/demo-replay.ps1` provide browser and API backup paths.
 - Every recovery attempt visibly has a policy result, approval (if required), and audit event.
 - The UI identifies fixture/sandbox/live mode truthfully.
 - Architecture and README explain CoCo’s orchestration role and skill boundaries.
