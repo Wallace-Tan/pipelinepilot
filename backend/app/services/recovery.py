@@ -21,6 +21,7 @@ from app.persistence.repositories import (
     AuditRepository,
     ExecutionRepository,
     IncidentRepository,
+    ValidationRepository,
 )
 from app.security.identity import RequestIdentity
 from app.services.errors import GovernanceError
@@ -191,10 +192,12 @@ class ValidationService:
         incident_repository: IncidentRepository,
         audit_repository: AuditRepository,
         validation_skill: FixtureValidationSkill | None = None,
+        validation_repository: ValidationRepository | None = None,
     ) -> None:
         self.incident_repository = incident_repository
         self.audit_repository = audit_repository
         self.validation_skill = validation_skill or FixtureValidationSkill()
+        self.validation_repository = validation_repository
 
     def validate(
         self,
@@ -207,6 +210,8 @@ class ValidationService:
         if incident.status is not IncidentStatus.RECOVERED or execution.status is not RecoveryExecutionStatus.SUCCEEDED:
             raise GovernanceError("invalid_transition", "Validation requires a succeeded recovery on a recovered incident.")
         result = self.validation_skill.validate(execution)
+        if self.validation_repository is not None:
+            self.validation_repository.save(result)
         if result.status is ValidationStatus.PASSED:
             self.incident_repository.save(incident.model_copy(update={"status": IncidentStatus.VALIDATED}))
             outcome = "validated"

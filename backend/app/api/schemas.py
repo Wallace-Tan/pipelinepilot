@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.contracts import (
-    ActorRole, ApprovalDecision, Evidence, Incident, PolicyDecision, PolicyDocument,
+    Approval, ActorRole, Evidence, Incident, PolicyDecision, PolicyDocument,
     Recommendation, RecoveryExecution, ValidationResult,
 )
 
@@ -34,6 +34,7 @@ class ActionRequest(BaseModel):
     evidence_ids: list[str] | None = None
     policy_decision: PolicyDecision | None = None
     reason: str = Field(default="Fixture-mode operator decision.", min_length=1, max_length=500)
+    approved: bool = True
 
 
 class FeedbackRequest(BaseModel):
@@ -59,6 +60,12 @@ class IncidentDetailResponse(BaseModel):
     audit: list[Any]
 
 
+class IncidentCreateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    incident: Incident
+    correlation_id: str
+
+
 class InvestigationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     incident: Incident
@@ -66,6 +73,26 @@ class InvestigationResponse(BaseModel):
     recommendation: Recommendation | None
     correlation_id: str
     degraded: bool
+    adapter_mode: str
+    fallback_reason: str | None = None
+
+
+class ApprovalResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    approval: Approval
+    correlation_id: str
+
+
+class ExecutionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    execution: RecoveryExecution
+    correlation_id: str
+
+
+class ValidationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    validation: ValidationResult
+    correlation_id: str
 
 
 class ReportResponse(BaseModel):
@@ -73,6 +100,9 @@ class ReportResponse(BaseModel):
     incident: Incident
     recommendation: Recommendation | None
     evidence: list[Evidence]
+    policy_decision: PolicyDecision | None
+    execution: RecoveryExecution | None
+    validation: ValidationResult | None
     audit: list[Any]
     feedback_count: int
 

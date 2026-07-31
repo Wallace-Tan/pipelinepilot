@@ -45,7 +45,7 @@ def test_full_lifecycle_and_feedback_are_reported(api_client) -> None:
     assert detail["policy_decision"]["decision"] == "approval_required"
     assert detail["recommendation"]["runbook_ids"] == ["runbook-schema-drift"]
     approve_and_execute(client)
-    assert client.post(f"/v1/incidents/{INCIDENT}/validate", headers=OPERATOR).json()["status"] == "passed"
+    assert client.post(f"/v1/incidents/{INCIDENT}/validate", headers=OPERATOR).json()["validation"]["status"] == "passed"
     feedback = client.post(f"/v1/incidents/{INCIDENT}/feedback", headers=OPERATOR, json={"correction": "Keep the staging contract check in the release checklist.", "outcome": "accepted"})
     assert feedback.status_code == 200
     report = client.get(f"/v1/incidents/{INCIDENT}/report", headers=VIEWER)

@@ -11,6 +11,7 @@ from app.domain.contracts import (
     PolicyDocument,
     Recommendation,
     RecoveryExecution,
+    ValidationResult,
 )
 from app.persistence.database import json_text
 
@@ -312,3 +313,20 @@ class FeedbackRepository:
     def count_for_incident(self, incident_id: str) -> int:
         row = self.connection.execute("SELECT COUNT(*) AS count FROM feedback WHERE incident_id = ?", (incident_id,)).fetchone()
         return int(row["count"])
+
+
+class ValidationRepository:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+
+    def save(self, result: ValidationResult) -> None:
+        from datetime import datetime, timezone
+        self.connection.execute(
+            "INSERT OR REPLACE INTO validation_results (execution_id, incident_id, document_json, created_at) VALUES (?, ?, ?, ?)",
+            (result.execution_id, result.incident_id, result.model_dump_json(), datetime.now(timezone.utc).isoformat()),
+        )
+        self.connection.commit()
+
+    def get_for_incident(self, incident_id: str) -> ValidationResult | None:
+        row = self.connection.execute("SELECT document_json FROM validation_results WHERE incident_id = ? ORDER BY created_at DESC LIMIT 1", (incident_id,)).fetchone()
+        return ValidationResult.model_validate(__import__("json").loads(row["document_json"])) if row else None
