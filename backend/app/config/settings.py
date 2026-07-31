@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     app_name: str = "PipelinePilot"
     mode: RuntimeMode = RuntimeMode.FIXTURE
+    database_path: str = "./pipelinepilot.sqlite3"
+    redaction_patterns: tuple[str, ...] = ("email", "card", "identifier")
 
 
 @lru_cache
