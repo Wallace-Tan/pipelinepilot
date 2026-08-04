@@ -3,7 +3,9 @@
 ## Scope and Current State
 
 - Applies to the repository root unless a deeper `AGENTS.md` exists; read the deepest applicable file first.
-- This repository contains a Milestone 1 scaffold: FastAPI backend, Vite React TypeScript frontend, and sanitized fixture/runbook data. No persistence, real integrations, authentication, recovery behavior, formatter, or CI workflow is present.
+- This repository contains a FastAPI backend, Vite React TypeScript dashboard, SQLite persistence, governed fixture recovery workflow, sanitized fixture/runbook data, a read-only Policy view, and an opt-in CoCo CLI bridge for read-only context and structured decision support. Production authentication, live recovery adapters, a formatter, and CI workflow are not present.
+- The default runtime is deterministic fixture mode. The CoCo bridge is enabled only with `PIPELINEPILOT_COCO_ENABLED=true`; it must never be represented as live connectivity unless a local `cortex` CLI session has been verified.
+- Keep generated caches and build outputs out of source control. Preserve `backend/uv.lock`, `frontend/package-lock.json`, demo scripts, fixtures, tests, and the root `.cortex/` skill configuration.
 - Do not invent setup, build, lint, test, or deployment commands. Add them only with the supporting project configuration and update this file in the same change.
 
 

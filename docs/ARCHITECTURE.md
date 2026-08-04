@@ -23,7 +23,7 @@ flowchart LR
 
 | Component | Responsibility |
 | --- | --- |
-| Dashboard | Shows incident state, evidence, approval controls, audit timeline, and RCA. Never decides policy. |
+| Dashboard | Shows incident state, evidence, approval controls, audit timeline, RCA, and the read-only active Policy view. Never decides policy. |
 | API/application service | Authorizes requests, coordinates state transitions, persists records, and returns stable REST envelopes. |
 | CoCo orchestrator adapter | Invokes the local CoCo CLI in one-shot structured-output mode, requests read-only Airflow/Snowflake context and a cited decision, validates its schema, and supports a deterministic demo fallback. |
 | Skills | Narrow callable capabilities for external observations or controlled actions. They return typed evidence/results only. |
@@ -49,9 +49,8 @@ backend/
     config/           # typed settings; no secrets committed
   tests/
 frontend/
-  src/features/incidents/
-  src/features/approvals/
-  src/shared/
+  src/main.tsx        # dashboard shell, incident workflow, and Policy view
+  src/styles.css      # design tokens and responsive presentation styles
 data/                 # versioned demo fixtures, policies, and sanitized runbooks
 docs/
 ```
@@ -160,7 +159,7 @@ Rules match action, environment, incident severity, retry count, and role. They 
 
 Milestone 5 uses a deterministic fixture recovery path. Execution proposals carry a SHA-256 request fingerprint over the incident snapshot, action, policy decision/version, and evidence IDs. Approval creates a planned execution record before binding the approval. Recovery requires the matching approval and idempotency key, then moves through `EXECUTING` and `RECOVERED`; validation alone may move the incident to `VALIDATED`. Failed or blocked records remain persisted and auditable.
 
-Milestone 6 exposes these services through a FastAPI application factory. API dependencies provide SQLite repositories, fixture-header identity, role authorization, correlation IDs, and idempotency keys. Responses use typed `/v1` contracts; failures return a safe error envelope and never expose raw fixture payloads or credentials. The React dashboard reads incident detail from the API and presents investigation, approval, recovery, validation, report, and feedback controls as fixture-mode operations.
+Milestone 6 exposes these services through a FastAPI application factory. API dependencies provide SQLite repositories, fixture-header identity, role authorization, correlation IDs, and idempotency keys. Responses use typed `/v1` contracts; failures return a safe error envelope and never expose raw fixture payloads or credentials. The React dashboard reads incident detail from the API and presents investigation, approval, recovery, validation, report, feedback, and read-only policy controls. Fixture mode remains the default; the opt-in CoCo bridge is the only live-context path.
 
 Milestone 7 adds a demo control plane. `GET /v1/demo/status` reports mode, seed, database, and whether context/decision adapters are fixture-backed or CoCo-backed. Admin-only `POST /v1/demo/reset` recreates the local fixture store and seeds the schema-drift incident; it remains unavailable outside fixture mode. End-to-end tests exercise denial and happy paths, while the replay script provides a deterministic backup demonstration without browser state. The default remains the typed fixture decision fallback; `PIPELINEPILOT_COCO_ENABLED=true` opts into the live CoCo CLI bridge.
 
