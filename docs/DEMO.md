@@ -71,6 +71,8 @@ If the backend is stopped, use `scripts/reset-fixture.ps1`, then restart the bac
 
 The script resets the fixture, runs the full governed lifecycle, measures elapsed time, and prints the final status. Expected output is represented by `scripts/demo-replay.expected.json`.
 
+The replay also verifies viewer mutation denial, validation-before-recovery gating, and missing-approval denial before exercising the approved fixture recovery path. For the live Airflow/Snowflake path, use [LIVE_INTEGRATION.md](LIVE_INTEGRATION.md); live credentials are never required for the default replay.
+
 ## Identity and Troubleshooting
 
 - Anonymous requests are read-only Viewer requests.
@@ -99,4 +101,5 @@ The script resets the fixture, runs the full governed lifecycle, measures elapse
 - [ ] Viewer mutations and missing approval are visibly denied.
 - [ ] Audit events, evidence, report, and fixture/degraded labels are visible.
 - [ ] Backup replay completes successfully.
+- [ ] Backup replay proves viewer denial, validation gating, and missing approval.
 - [ ] Any recording contains no credentials, raw PII, or generated SQLite files.
