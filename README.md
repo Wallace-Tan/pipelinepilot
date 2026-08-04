@@ -47,7 +47,7 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
 
 Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbooks live under `data/runbooks`, and the immutable fixture policy is `data/policies/demo_policy.json`.
 
-Fixture mode remains the default and does not require credentials. An opt-in CoCo path is available: when `PIPELINEPILOT_COCO_ENABLED=true`, the backend invokes the local `cortex` CLI for read-only Airflow/Snowflake context and structured decision support. CoCo failures fall back to the deterministic fixture recommendation and remain visible in adapter status.
+Fixture mode remains the default and does not require credentials. An opt-in CoCo path is available: when `PIPELINEPILOT_COCO_ENABLED=true`, the backend invokes the local `cortex` CLI for read-only Airflow/Snowflake context and structured decision support. CoCo is reported as unverified until an investigation completes; successful live evidence, fixture fallback, and safe fallback reasons are exposed through `adapter_status`. Recovery remains fixture-only.
 
 Milestone 6 adds the `/v1` incident lifecycle API and connects the dashboard to persisted fixture-mode state. Milestone 4 provides deterministic runbook retrieval and recommendation validation; Milestone 5 provides policy evaluation, fingerprint-bound approvals, idempotent fixture recovery, and validation-gated transitions. No live integration or recovery write is enabled.
 

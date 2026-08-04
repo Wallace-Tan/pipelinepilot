@@ -32,11 +32,16 @@ The safe default demo uses fixtures. To exercise the real CoCo integration, auth
 ```powershell
 $env:PIPELINEPILOT_COCO_ENABLED = "true"
 $env:PIPELINEPILOT_COCO_CONNECTION = "your-snowflake-connection"
+$env:PIPELINEPILOT_COCO_TIMEOUT_SECONDS = "90"
 cd backend
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-CoCo is invoked in one-shot JSON mode from the backend and is instructed to perform read-only Airflow/Snowflake investigation. The dashboard status reports `coco` for the context and decision adapters. If CoCo is unavailable or returns malformed/uncited output, the typed boundary rejects it and the deterministic fixture recommendation is used instead; recovery remains governed by the backend policy and approval workflow.
+CoCo is invoked in one-shot JSON mode from the backend and is instructed to perform read-only Airflow/Snowflake investigation. The dashboard reports the result of the latest investigation, not merely the configuration flag: `CoCo live path`, `CoCo live context`, `CoCo fallback`, or `Fixture mode`. A newly enabled CoCo process remains `CoCo configured` until an investigation completes successfully. If CoCo is unavailable or returns malformed/uncited output, the typed boundary rejects it, the deterministic fixture recommendation is selected, and the fallback reason remains visible. Recovery remains governed by the backend policy and approval workflow and is always fixture-only.
+
+The investigation response and `GET /v1/demo/status` expose `adapter_status` for each context skill and the decision adapter. Each entry includes the actual `mode`, `status`, `source`, and safe `reason` when degraded. Live evidence is marked `mode: live`; fixture recovery continues to return a `fixture://recovery/...` reference.
+
+Use the current Snowflake CLI reference to confirm the installed command supports the backend's one-shot invocation shape (`--connection`, `--workdir`, `--print`, and `--output-format stream-json`) before claiming a live result. The backend must receive a schema-valid response from the installed CLI.
 
 ## Reset
 

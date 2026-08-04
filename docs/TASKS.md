@@ -66,6 +66,6 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 Remaining stretch: PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow adapters (P2/8h), PP-024 incident similarity/feedback ranking (P2/6h), PP-025 Slack/Jira notification (P2/4h), and PP-027 multi-pipeline routing (P2/8h). Each must retain the contracts and guardrails established above.
 
-Milestone 8 integration note: an opt-in CoCo CLI bridge now covers read-only Airflow/Snowflake context and structured decision support behind the existing contracts. Live account verification remains an external prerequisite because credentials and the `cortex` executable are not committed or available in the repository environment.
+Milestone 8 integration note: an opt-in CoCo CLI bridge now covers read-only Airflow/Snowflake context and structured decision support behind the existing contracts. Runtime status is result-based: CoCo is `unverified` until an investigation completes, live evidence is labeled `live`, and unavailable or malformed output retains the deterministic fixture fallback with a visible reason. Live account verification remains an external prerequisite because credentials and the `cortex` executable are not committed or available in the repository environment; recovery remains fixture-only.
 
 Milestone 7 status: PP-019 and PP-020 are Achieved. PP-021 is Partial until the external backup recording and final submission review are completed.
