@@ -5,6 +5,7 @@
 - Python 3.12 and `uv`
 - Node.js 22 and npm
 - A clean checkout with no committed SQLite database
+- For the live CoCo path only: Snowflake CoCo CLI, an authenticated Snowflake connection, and read-only Airflow credentials configured for CoCo
 
 ## Start
 
@@ -23,6 +24,19 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:5173/`. The UI must show `fixture`, `database ready`, and the intentionally degraded Snowflake metadata adapter.
+
+## Optional CoCo-backed investigation
+
+The safe default demo uses fixtures. To exercise the real CoCo integration, authenticate `cortex`, configure its Snowflake connection and Airflow instance, then start the backend with:
+
+```powershell
+$env:PIPELINEPILOT_COCO_ENABLED = "true"
+$env:PIPELINEPILOT_COCO_CONNECTION = "your-snowflake-connection"
+cd backend
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+CoCo is invoked in one-shot JSON mode from the backend and is instructed to perform read-only Airflow/Snowflake investigation. The dashboard status reports `coco` for the context and decision adapters. If CoCo is unavailable or returns malformed/uncited output, the typed boundary rejects it and the deterministic fixture recommendation is used instead; recovery remains governed by the backend policy and approval workflow.
 
 ## Reset
 

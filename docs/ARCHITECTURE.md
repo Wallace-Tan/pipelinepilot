@@ -25,7 +25,7 @@ flowchart LR
 | --- | --- |
 | Dashboard | Shows incident state, evidence, approval controls, audit timeline, and RCA. Never decides policy. |
 | API/application service | Authorizes requests, coordinates state transitions, persists records, and returns stable REST envelopes. |
-| CoCo orchestrator adapter | Supplies a tool/skill catalog, requests a structured investigation plan/decision, validates its schema, and supports a deterministic demo fallback. |
+| CoCo orchestrator adapter | Invokes the local CoCo CLI in one-shot structured-output mode, requests read-only Airflow/Snowflake context and a cited decision, validates its schema, and supports a deterministic demo fallback. |
 | Skills | Narrow callable capabilities for external observations or controlled actions. They return typed evidence/results only. |
 | Knowledge repository | Stores curated runbooks, previous RCAs, and feedback; retrieves cited, filtered documents. |
 | Policy engine | Deterministically calculates risk and permission requirements from action, environment, role, and policy version. |
@@ -73,7 +73,7 @@ Dependency rule: `api → services → domain`; services may depend on interface
 | Validation | Check expected recovery signals | execution/incident ID | pass/fail checks | dbt/metadata/monitoring | report partial/failed validation; do not close incident |
 | Incident report | Render RCA | incident + audit + evidence | structured report | templates | mark unavailable evidence explicitly |
 
-Context skills use versioned contracts with a `SkillContext` input and `SkillResult` output. Results carry a normalized `Evidence` value when available, an `AVAILABLE`/`DEGRADED`/`UNAVAILABLE` status, adapter mode, and a safe degradation reason. Fixture adapters implement the same boundary as future read-only Airflow or Snowflake adapters.
+Context skills use versioned contracts with a `SkillContext` input and `SkillResult` output. Results carry a normalized `Evidence` value when available, an `AVAILABLE`/`DEGRADED`/`UNAVAILABLE` status, adapter mode, and a safe degradation reason. Fixture adapters and the opt-in CoCo CLI adapter implement the same boundary; the CoCo path uses built-in read-only Airflow and Snowflake capabilities and never performs recovery writes.
 
 ## CoCo Orchestration Flow
 
@@ -162,7 +162,7 @@ Milestone 5 uses a deterministic fixture recovery path. Execution proposals carr
 
 Milestone 6 exposes these services through a FastAPI application factory. API dependencies provide SQLite repositories, fixture-header identity, role authorization, correlation IDs, and idempotency keys. Responses use typed `/v1` contracts; failures return a safe error envelope and never expose raw fixture payloads or credentials. The React dashboard reads incident detail from the API and presents investigation, approval, recovery, validation, report, and feedback controls as fixture-mode operations.
 
-Milestone 7 adds a fixture-only demo control plane. `GET /v1/demo/status` reports mode, seed, database, and adapter readiness. Admin-only `POST /v1/demo/reset` recreates the local fixture store and seeds the schema-drift incident; it is deliberately unavailable outside fixture mode. End-to-end tests exercise denial and happy paths, while the replay script provides a deterministic backup demonstration without browser state. The MVP uses the typed fixture decision fallback rather than a live CoCo adapter.
+Milestone 7 adds a demo control plane. `GET /v1/demo/status` reports mode, seed, database, and whether context/decision adapters are fixture-backed or CoCo-backed. Admin-only `POST /v1/demo/reset` recreates the local fixture store and seeds the schema-drift incident; it remains unavailable outside fixture mode. End-to-end tests exercise denial and happy paths, while the replay script provides a deterministic backup demonstration without browser state. The default remains the typed fixture decision fallback; `PIPELINEPILOT_COCO_ENABLED=true` opts into the live CoCo CLI bridge.
 
 ## Future Scaling
 

@@ -9,7 +9,7 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 | Criterion | Feature proof | What to show |
 | --- | --- | --- |
 | Real-World Relevancy (30%) | Airflow/dbt/Snowflake incident flow, PII redaction, RBAC, runbook-grounded RCA | Start with the engineer’s painful manual workflow; show impact and safeguards. |
-| Technical Execution (40%) | Typed skills, parallel context, retrieval citations, deterministic decision fallback, policy/approval gate, audit events | Show the skill trace and explain the future CoCo boundary and why no adapter directly calls systems. |
+| Technical Execution (40%) | Typed skills, parallel context, CoCo CLI bridge, retrieval citations, deterministic policy/approval gate, audit events | Show the CoCo-backed read-only path when credentials are available and the deterministic fallback when they are not. |
 | Solution Completeness (30%) | Failure → evidence → decision → policy → approval → recovery → validation → report | Complete the one seeded scenario live, including the initial blocked state. |
 
 ## Five-Minute Demo Script
@@ -30,7 +30,7 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 
 ## Judge Talking Points
 
-- The decision boundary is typed and adapter-based; the selected MVP implementation is a deterministic fixture fallback because no live CoCo credentials or integration are configured.
+- The decision boundary is typed and adapter-based; the demo defaults to a deterministic fallback, while the opt-in path invokes the Snowflake CoCo CLI for structured read-only context and decision support.
 - Skills enforce least privilege: read skills cannot execute, execution cannot access arbitrary data.
 - The recommendation is grounded in retrieved runbooks and evidence IDs, not generic text.
 - Policy is deterministic, versioned, default-deny, and separate from AI output.
@@ -56,7 +56,7 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 
 | Risk | Mitigation / fallback |
 | --- | --- |
-| CoCo CLI setup or output reliability | Put it behind one adapter, validate structured output, and demonstrate a deterministic labeled fallback; never block the lifecycle. |
+| CoCo CLI setup or output reliability | Put it behind one adapter, validate structured output and citations, and demonstrate a deterministic labeled fallback; never block the governed lifecycle. |
 | External credentials/network | Use sanitized fixtures and a visible mode badge; add one read-only connector only if stable. |
 | RAG quality | Curate a tiny tagged corpus and show citations; avoid an untested large corpus. |
 | Live recovery is unsafe | Use sandbox/simulation with the exact same Recovery skill contract. |
