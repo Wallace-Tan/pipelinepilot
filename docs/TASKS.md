@@ -60,6 +60,10 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 
 ## Milestone 8 — Stretch (only after PP-021)
 
-PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow adapters (P2/8h), PP-024 incident similarity/feedback ranking (P2/6h), PP-025 Slack/Jira notification (P2/4h), PP-026 policy UI (P2/8h), and PP-027 multi-pipeline routing (P2/8h). Each must retain the contracts and guardrails established above.
+| ID | Status | Title | Description | Depends on | Priority / effort | Acceptance criteria | Commit / branch |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP-026 | Achieved | Read-only policy UI | Add a dedicated dashboard view for the active immutable policy, rules, risk, approvals, and default-deny behavior. | PP-016, PP-017 | P2 / 8h | Viewer-readable policy metadata and all active rules are visible with loading/error states; no policy mutation is exposed. | `feat(ui): add policy view` |
+
+Remaining stretch: PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow adapters (P2/8h), PP-024 incident similarity/feedback ranking (P2/6h), PP-025 Slack/Jira notification (P2/4h), and PP-027 multi-pipeline routing (P2/8h). Each must retain the contracts and guardrails established above.
 
 Milestone 7 status: PP-019 and PP-020 are Achieved. PP-021 is Partial until the external backup recording and final submission review are completed.

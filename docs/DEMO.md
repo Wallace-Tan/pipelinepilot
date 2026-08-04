@@ -36,12 +36,13 @@ If the backend is stopped, use `scripts/reset-fixture.ps1`, then restart the bac
 ## Five-Minute Walkthrough
 
 1. **0:00–0:35 — Detect:** Show the failed `retail_orders_daily` incident, high severity, run identifier, and Fixture mode.
-2. **0:35–1:20 — Investigate:** Click `Investigate fixture incident`; show monitoring, Airflow log, dbt, and degraded Snowflake metadata evidence.
-3. **1:20–2:10 — Recommend:** Show the schema-drift recommendation, high confidence, cited evidence IDs, and `runbook-schema-drift` citation.
-4. **2:10–3:05 — Govern:** Show the `APPROVAL_REQUIRED` policy gate. Execution before approval returns a safe `approval_required` error.
-5. **3:05–4:00 — Recover:** Approve and execute fixture recovery. Point out the idempotency key, fixture reference, actor, policy version, and audit events.
-6. **4:00–4:40 — Validate:** Run validation and show the incident reaching `VALIDATED` only after checks pass.
-7. **4:40–5:00 — Report:** Open the report, show evidence-linked RCA, uncertainty, audit trail, and feedback capability.
+2. **0:35–0:55 — Policy:** Open the read-only Policy view; show the immutable fixture policy, version, default-deny behavior, and approval-required schema-drift rule.
+3. **0:55–1:35 — Investigate:** Click `Investigate fixture incident`; show monitoring, Airflow log, dbt, and degraded Snowflake metadata evidence.
+4. **1:35–2:20 — Recommend:** Show the schema-drift recommendation, high confidence, cited evidence IDs, and `runbook-schema-drift` citation.
+5. **2:20–3:05 — Govern:** Show the `APPROVAL_REQUIRED` policy gate. Execution before approval returns a safe `approval_required` error.
+6. **3:05–4:00 — Recover:** Approve and execute fixture recovery. Point out the idempotency key, fixture reference, actor, policy version, and audit events.
+7. **4:00–4:40 — Validate:** Run validation and show the incident reaching `VALIDATED` only after checks pass.
+8. **4:40–5:00 — Report:** Open the report, show evidence-linked RCA, uncertainty, audit trail, and feedback capability.
 
 ## Backup API Replay
 

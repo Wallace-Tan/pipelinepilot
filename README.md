@@ -53,6 +53,8 @@ Milestone 6 adds the `/v1` incident lifecycle API and connects the dashboard to 
 
 Milestone 7 adds the Admin-only fixture reset, demo readiness status, full lifecycle verification, API replay script, and judge walkthrough. Use `docs/DEMO.md` for the five-minute scenario and recovery instructions.
 
+Milestone 8 adds a read-only Policy view backed by `GET /v1/policies/current`. It exposes the active immutable policy, fixture environment, default-deny behavior, approval requirements, and rule constraints without allowing policy changes.
+
 ## Fixture-mode security
 
 Requests may provide `X-Actor-Id` and `X-Actor-Role` headers with `viewer`, `operator`, or `admin`. Missing identity headers default to the read-only `anonymous-viewer` identity. The backend stores sanitized evidence and rejects unsupported roles or unauthorized transitions.

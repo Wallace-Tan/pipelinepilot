@@ -45,6 +45,9 @@ type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: 
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; collected_at: string; citations: { title: string; section: string }[] };
 type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
 type ApiReport = { recommendation: { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; uncertainty: string } | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
+type ApiPolicyRule = { id: string; action: string; environment: string; minimum_role: string; risk: string; decision: string; required_approver_role: string | null; minimum_severity: string | null; max_retry_count: number | null; reasons: string[] };
+type ApiPolicy = { schema_version: "policy.v1"; id: string; version: string; mode: string; immutable: boolean; rules: ApiPolicyRule[]; default_decision: string };
+type ApiPolicyResponse = { policy: ApiPolicy };
 
 const API_INCIDENT_ID = "inc-retail-orders-20260723";
 const API_HEADERS = { "X-Actor-Id": "operator-demo", "X-Actor-Role": "operator", "Content-Type": "application/json" };
@@ -180,6 +183,50 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">{paths[name]}</svg>;
 }
 
+function formatPolicyValue(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function PolicyView({ policy, loading, error, onRetry }: { policy: ApiPolicy | null; loading: boolean; error: string | null; onRetry: () => void }) {
+  return (
+    <div className="policy-view animate-in">
+      <section className="policy-heading">
+        <div>
+          <span className="eyebrow">Governance configuration</span>
+          <h1>Active policy</h1>
+          <p className="subhead">The server-side rules that determine whether incident actions are allowed, gated, or denied.</p>
+        </div>
+        <div className="policy-readonly-badge"><Icon name="lock" size={15} /><span>Read-only</span></div>
+      </section>
+
+      {loading && <section className="panel policy-state" role="status"><span className="status-dot is-emerald" />Loading the active policy…</section>}
+      {error && <section className="panel policy-state is-error" role="alert"><span className="signal-dot" /><span>{error}</span><button className="text-action" onClick={onRetry} type="button">Retry</button></section>}
+      {!loading && !error && policy && <>
+        <section className="policy-summary-grid" aria-label="Policy summary">
+          <div className="panel policy-summary-card"><span className="eyebrow">Policy version</span><strong>{policy.version}</strong><small>{policy.id}</small></div>
+          <div className="panel policy-summary-card"><span className="eyebrow">Environment</span><strong>{formatPolicyValue(policy.mode)}</strong><small>Runtime mode</small></div>
+          <div className="panel policy-summary-card"><span className="eyebrow">Protection</span><strong>{policy.immutable ? "Immutable" : "Mutable"}</strong><small>Policy changes require a new version</small></div>
+          <div className="panel policy-summary-card"><span className="eyebrow">Default decision</span><strong>{formatPolicyValue(policy.default_decision)}</strong><small>Unknown actions fail closed</small></div>
+        </section>
+
+        <section className="panel policy-rules-panel">
+          <div className="section-heading"><div><span className="eyebrow">Decision rules</span><h2>{policy.rules.length} active rules</h2></div><span className="count-badge">{policy.schema_version}</span></div>
+          <div className="policy-rules" role="list">
+            {policy.rules.map((rule) => <article className="policy-rule" key={rule.id} role="listitem">
+              <div className="policy-rule-header"><div><span className="eyebrow">{rule.id}</span><h3>{formatPolicyValue(rule.action)}</h3></div><span className={`policy-decision-badge is-${rule.decision}`}>{formatPolicyValue(rule.decision)}</span></div>
+              <div className="policy-rule-meta"><span><b>Environment</b>{formatPolicyValue(rule.environment)}</span><span><b>Minimum role</b>{formatPolicyValue(rule.minimum_role)}</span><span><b>Risk</b>{formatPolicyValue(rule.risk)}</span><span><b>Approver</b>{rule.required_approver_role ? formatPolicyValue(rule.required_approver_role) : "Not required"}</span></div>
+              <div className="policy-rule-constraints"><span>Minimum severity: {rule.minimum_severity ? formatPolicyValue(rule.minimum_severity) : "None"}</span><span>Maximum retries: {rule.max_retry_count ?? "Unbounded"}</span></div>
+              <ul className="policy-reasons">{rule.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+            </article>)}
+          </div>
+        </section>
+
+        <div className="policy-footnote"><Icon name="shield" size={14} /><span>Policy is evaluated by the backend before approval or recovery. This view cannot change rules or authorize an action.</span></div>
+      </>}
+    </div>
+  );
+}
+
 function App() {
   const [activeNav, setActiveNav] = useState("Overview");
   const [filter, setFilter] = useState<EvidenceFilter>("all");
@@ -194,15 +241,25 @@ function App() {
   const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null);
   const [report, setReport] = useState<ApiReport | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [livePolicyDocument, setLivePolicyDocument] = useState<ApiPolicy | null>(null);
+  const [policyError, setPolicyError] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
     try {
-      const [detail, statusResponse, reportResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status"), fetch(`/v1/incidents/${API_INCIDENT_ID}/report`)]);
+      const [detail, statusResponse, reportResponse, policyResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status"), fetch(`/v1/incidents/${API_INCIDENT_ID}/report`), fetch("/v1/policies/current")]);
       if (!statusResponse.ok) throw new Error("Demo readiness status is unavailable.");
       setDemoStatus(await statusResponse.json() as DemoStatus);
       const reportData = reportResponse.ok ? await reportResponse.json() as ApiReport : null;
       setReport(reportData);
+      if (policyResponse.ok) {
+        const policyData = await policyResponse.json() as ApiPolicyResponse;
+        setLivePolicyDocument(policyData.policy);
+        setPolicyError(null);
+      } else {
+        setLivePolicyDocument(null);
+        setPolicyError(policyResponse.status === 503 ? "The active policy is unavailable." : "The policy API request was rejected.");
+      }
       setLiveIncident(mapIncident(detail.incident));
       setLiveEvidence(detail.evidence.map(mapEvidence));
       setLiveAudit(detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" : "neutral" })));
@@ -270,8 +327,8 @@ function App() {
         </div>
         <div className="rail-label">Workspace</div>
         <nav className="main-nav">
-          {[{ label: "Overview", icon: "grid" as IconName }, { label: "Incidents", icon: "activity" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
-            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { setActiveNav(item.label); setNotice(`${item.label} view is ready for the next API milestone.`); }} type="button">
+          {[{ label: "Overview", icon: "grid" as IconName }, { label: "Incidents", icon: "activity" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
+            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { setActiveNav(item.label); if (item.label !== "Policy") setNotice(`${item.label} view is ready for the next API milestone.`); }} type="button">
               <Icon name={item.icon} />
               <span>{item.label}</span>
               {item.label === "Incidents" && <span className="nav-count">1</span>}
@@ -303,6 +360,7 @@ function App() {
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
           {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · Snowflake metadata degraded by design</div>}
+          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
               <div className="eyebrow-row"><span className="eyebrow">Active incident</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} severity</span></div>
@@ -386,6 +444,7 @@ function App() {
           </section>
 
           <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />Fixture mode · sanitized evidence only</span><span>PipelinePilot v0.3 · governed by policy</span></footer>
+          </>}
         </div>
         {notice && <button className="notice-toast" onClick={() => setNotice(null)} type="button"><Icon name="spark" size={15} /><span>{notice}</span><span className="toast-dismiss">Dismiss</span></button>}
       </main>
