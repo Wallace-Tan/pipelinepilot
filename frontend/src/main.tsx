@@ -42,7 +42,7 @@ type AuditEntry = {
 };
 
 type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
-type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; collected_at: string; citations: { title: string; section: string }[] };
+type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; mode: string; collected_at: string; citations: { title: string; section: string }[] };
 type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
 type ApiReport = { recommendation: { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; uncertainty: string } | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
 type ApiPolicyRule = { id: string; action: string; environment: string; minimum_role: string; risk: string; decision: string; required_approver_role: string | null; minimum_severity: string | null; max_retry_count: number | null; reasons: string[] };
@@ -52,7 +52,8 @@ type ApiPolicyResponse = { policy: ApiPolicy };
 const API_INCIDENT_ID = "inc-retail-orders-20260723";
 const API_HEADERS = { "X-Actor-Id": "operator-demo", "X-Actor-Role": "operator", "Content-Type": "application/json" };
 const API_ADMIN_HEADERS = { "X-Actor-Id": "admin-demo", "X-Actor-Role": "admin", "Content-Type": "application/json" };
-type DemoStatus = { mode: string; fixture: string; database_ready: boolean; adapters: Record<string, string> };
+type DemoAdapterStatus = { mode: string; status: string; source: string; reason?: string | null };
+type DemoStatus = { mode: string; fixture: string; database_ready: boolean; adapters: Record<string, string>; adapter_status: Record<string, DemoAdapterStatus> };
 
 async function fetchIncident(): Promise<ApiDetail> {
   const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}`);
@@ -66,7 +67,7 @@ function mapIncident(value: ApiIncident) {
 
 function mapEvidence(value: ApiEvidence): EvidenceViewModel {
   const sourceLabel = value.source.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-  return { id: value.id, source: value.source, sourceLabel, status: value.source === "snowflake_metadata" ? "degraded" : "available", summary: value.summary, detail: value.summary, timestamp: new Date(value.collected_at).toLocaleTimeString(), metadata: value.evidence_type, citation: value.citations[0] ? `${value.citations[0].title} · ${value.citations[0].section}` : undefined };
+  return { id: value.id, source: value.source, sourceLabel, status: value.mode === "live" || value.source !== "snowflake_metadata" ? "available" : "degraded", summary: value.summary, detail: value.summary, timestamp: new Date(value.collected_at).toLocaleTimeString(), metadata: `${value.evidence_type} · ${value.mode}`, citation: value.citations[0] ? `${value.citations[0].title} · ${value.citations[0].section}` : undefined };
 }
 
 type IconName =
@@ -258,6 +259,21 @@ function App() {
   const [livePolicyDocument, setLivePolicyDocument] = useState<ApiPolicy | null>(null);
   const [policyError, setPolicyError] = useState<string | null>(null);
 
+  const integration = useMemo(() => {
+    const details = demoStatus?.adapter_status;
+    if (!details) return { label: "Fixture mode", detail: "Sanitized evidence only", notice: "Fixture mode uses sanitized evidence and does not execute recovery actions.", actionLabel: "Investigate fixture incident" };
+    const context = Object.entries(details).filter(([name]) => name !== "decision");
+    const liveContext = context.some(([, value]) => value.mode === "live");
+    const degradedContext = context.filter(([, value]) => value.status !== "available");
+    const contextReason = degradedContext.length > 0 ? ` ${degradedContext.map(([name, value]) => `${name}: ${value.reason ?? value.status}`).join("; ")}` : "";
+    const decision = details.decision;
+    if (liveContext && decision?.mode === "live") return { label: "CoCo live path", detail: "Live context + live decision", notice: `CoCo supplied live read-only context and decision support.${contextReason} Policy remains server-side; recovery remains fixture-only.`, actionLabel: "Investigate with CoCo" };
+    if (liveContext) return { label: "CoCo live context", detail: "Fixture decision + recovery", notice: `CoCo supplied live read-only context.${contextReason} ${decision?.reason ?? "Decision support is using the deterministic fixture fallback."} Recovery remains fixture-only.`, actionLabel: "Investigate with CoCo" };
+    if (decision?.status === "degraded") return { label: "CoCo fallback", detail: "Fixture context + decision", notice: `${decision.reason ?? "CoCo was unavailable."} The deterministic fixture path remains governed by server policy.`, actionLabel: "Investigate fixture incident" };
+    if (decision?.source === "coco") return { label: "CoCo configured", detail: "Awaiting verified call", notice: "CoCo is configured but the latest investigation has not verified a live result.", actionLabel: "Investigate with CoCo" };
+    return { label: "Fixture mode", detail: "Sanitized evidence only", notice: "Fixture mode uses sanitized evidence and does not execute recovery actions.", actionLabel: "Investigate fixture incident" };
+  }, [demoStatus]);
+
   const refresh = async () => {
     setLoading(true);
     try {
@@ -307,7 +323,7 @@ function App() {
       const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/${path}`, { method: "POST", headers: { ...API_HEADERS, "Idempotency-Key": key }, body: body ? JSON.stringify(body) : undefined });
       if (!response.ok) throw new Error("The server rejected this governed action.");
       await refresh();
-      setNotice("Fixture-mode action completed and the incident view was refreshed.");
+      setNotice(path === "investigate" ? "Investigation completed. Adapter status reflects the actual CoCo or fixture result; recovery remains fixture-only." : "Governed fixture action completed and the incident view was refreshed.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Action failed.");
     }
@@ -351,9 +367,9 @@ function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="rail-label">Environment</div>
-          <button className="environment-card" onClick={() => setNotice(demoStatus?.adapters.decision === "coco" ? "CoCo is enabled for read-only context and decision support. Recovery remains governed by the backend policy and approval workflow." : "Fixture mode uses sanitized evidence and does not execute recovery actions.")} type="button">
+          <button className="environment-card" onClick={() => setNotice(integration.notice)} type="button">
             <span className="signal-dot is-emerald" />
-            <span><strong>{demoStatus?.adapters.decision === "coco" ? "CoCo bridge" : "Fixture mode"}</strong><small>{demoStatus?.adapters.decision === "coco" ? "Read-only external context" : "Safe demo environment"}</small></span>
+            <span><strong>{integration.label}</strong><small>{integration.detail}</small></span>
             <Icon name="chevron" size={15} />
           </button>
           <div className="user-chip"><span className="avatar">OP</span><span><strong>Operator</strong><small>Demo identity</small></span><span className="status-dot" /></div>
@@ -373,7 +389,7 @@ function App() {
         <div className="content-wrap">
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
-          {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {demoStatus.adapters.decision === "coco" ? "CoCo-backed read-only context and decision" : "Fixture context and decision"} · {demoStatus.adapters.snowflake_metadata === "coco" ? "Snowflake metadata via CoCo" : "Snowflake metadata degraded by design"}</div>}
+          {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {integration.label} · {integration.detail} · recovery fixture-only</div>}
           {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
@@ -431,12 +447,12 @@ function App() {
                 <div className="fixture-actions">
                   {loading && <span className="muted-label">Loading live incident state…</span>}
                   {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
-                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{demoStatus?.adapters.decision === "coco" ? "Investigate with CoCo" : "Investigate fixture incident"}</button>}
+                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{integration.actionLabel}</button>}
                   {!loading && liveIncident.status === "Investigated" && <><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." })} type="button">Reject recovery</button></>}
                   {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
                   {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
-                <div className="preview-note"><span className="signal-dot is-amber" /><span>{demoStatus?.adapters.decision === "coco" ? "CoCo context is read-only; recovery remains fixture-only and is governed by the server policy." : "Fixture actions are governed by the server policy and remain visibly non-production."}</span></div>
+                <div className="preview-note"><span className="signal-dot is-amber" /><span>{integration.notice}</span></div>
               </section>
               <section className="panel recommendation-panel animate-in delay-4">
                 <div className="section-heading"><div><span className="eyebrow">Decision support</span><h2>Root cause signal</h2></div><span className="confidence">High</span></div>
@@ -457,7 +473,7 @@ function App() {
             <div className="feedback-form"><input aria-label="Operator feedback" onChange={(event) => setFeedbackText(event.target.value)} placeholder="Add an operator correction" value={feedbackText} /><button className="secondary-button" disabled={!feedbackText.trim()} onClick={() => void submitFeedback()} type="button">Record feedback</button></div>
           </section>
 
-          <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />{demoStatus?.adapters.decision === "coco" ? "CoCo bridge · read-only external context" : "Fixture mode · sanitized evidence only"}</span><span>PipelinePilot v0.3 · governed by policy</span></footer>
+          <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />{integration.label} · {integration.detail}</span><span>PipelinePilot v0.3 · governed by policy · recovery fixture-only</span></footer>
           </>}
         </div>
         {notice && <button className="notice-toast" onClick={() => setNotice(null)} type="button"><Icon name="spark" size={15} /><span>{notice}</span><span className="toast-dismiss">Dismiss</span></button>}
