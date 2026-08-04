@@ -68,4 +68,6 @@ Remaining stretch: PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow a
 
 Milestone 8 integration note: an opt-in CoCo CLI bridge now covers read-only Airflow/Snowflake context and structured decision support behind the existing contracts. Runtime status is result-based: CoCo is `unverified` until an investigation completes, live evidence is labeled `live`, and unavailable or malformed output retains the deterministic fixture fallback with a visible reason. Live account verification remains an external prerequisite because credentials and the `cortex` executable are not committed or available in the repository environment; recovery remains fixture-only.
 
+Verification assets now include `scripts/prepare-airflow-proof.ps1`, `scripts/verify-coco-live.ps1`, and `docs/LIVE_INTEGRATION.md`. Repository-side PowerShell parsing, Python compilation, and frontend TypeScript checks pass. PP-009 and PP-011 remain unachieved because `cortex`/`snow` are not available in the current host environment, and PP-021 remains Partial until the clean-checkout replay and external recording are completed.
+
 Milestone 7 status: PP-019 and PP-020 are Achieved. PP-021 is Partial until the external backup recording and final submission review are completed.
