@@ -60,6 +60,8 @@ Milestone 8 adds a read-only Policy view backed by `GET /v1/policies/current`. I
 
 Install and authenticate the Snowflake CoCo CLI, then verify the connection with `cortex --version` and a read-only prompt. CoCo requires a Snowflake connection with `SNOWFLAKE.CORTEX_USER` or `SNOWFLAKE.CORTEX_AGENT_USER`; Airflow access is configured through the CoCo Airflow integration. See `docs/DEMO.md` for the live-mode launch command. Never commit `connections.toml`, tokens, or Airflow credentials.
 
+On native Windows, the installed wrapper may be `cortex.cmd` under `%LOCALAPPDATA%\cortex\bin`. Add that directory to the current PowerShell session and set `PIPELINEPILOT_COCO_COMMAND=cortex.cmd` before starting the backend.
+
 ## Fixture-mode security
 
 Requests may provide `X-Actor-Id` and `X-Actor-Role` headers with `viewer`, `operator`, or `admin`. Missing identity headers default to the read-only `anonymous-viewer` identity. The backend stores sanitized evidence and rejects unsupported roles or unauthorized transitions.

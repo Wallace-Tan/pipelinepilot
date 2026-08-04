@@ -58,6 +58,16 @@ Use only a metadata prompt. Confirm that the intended demo objects are visible a
 
 ## PipelinePilot proof
 
+On native Windows, the installer may expose `cortex.cmd` rather than an extensionless `cortex` command. In the same PowerShell window used to start the backend, configure the installed wrapper explicitly:
+
+```powershell
+$cortexBin = Join-Path $env:LOCALAPPDATA "cortex\bin"
+$env:Path = "$cortexBin;$env:Path"
+Get-Command cortex.cmd
+cortex.cmd --version
+$env:PIPELINEPILOT_COCO_COMMAND = "cortex.cmd"
+```
+
 Start the backend with:
 
 ```powershell
