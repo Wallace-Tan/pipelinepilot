@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 
 from app.api.dependencies import correlation_id, idempotency_key, remember_idempotent, replay_idempotent, require_admin, require_viewer, resources
 from app.api.schemas import DemoResetResponse, DemoStatusResponse
+from app.config.paths import FIXTURE_ROOT, PROJECT_ROOT
 from app.domain.contracts import RuntimeMode
 from app.demo.seed import FixtureSeedService
 from app.persistence.repositories import IncidentRepository
@@ -24,10 +26,9 @@ def demo_status(request: Request, identity: RequestIdentity = Depends(require_vi
         database_ready = True
     except Exception:
         database_ready = False
-    fixture_root = request.app.state.root / "data/fixtures/schema_drift"
     adapter_mode = "coco" if app_resources.settings.coco_enabled else "fixture"
     adapters = {
-        name: adapter_mode if (fixture_root / filename).exists() else "unavailable"
+        name: adapter_mode if (FIXTURE_ROOT / filename).exists() else "unavailable"
         for name, filename in {
             "monitoring": "monitoring_status.json",
             "airflow_log": "airflow_parser_log.json",
@@ -55,8 +56,9 @@ def reset_demo(request: Request, identity: RequestIdentity = Depends(require_adm
     if app_resources.settings.mode is not RuntimeMode.FIXTURE:
         from fastapi import HTTPException
         raise HTTPException(status_code=409, detail={"code": "fixture_only", "message": "Demo reset is available only in fixture mode.", "correlation_id": correlation})
-    app_resources.connection = app_resources.database.reset_fixture(app_resources.connection)
-    incident = FixtureSeedService(request.app.state.root).seed(app_resources.connection)
+    connection = app_resources.database.reset_fixture(app_resources.connection)
+    request.app.state.resources = replace(app_resources, connection=connection)
+    incident = FixtureSeedService(PROJECT_ROOT).seed(connection)
     response = DemoResetResponse(
         schema_version="demo_reset.v1",
         incident_id=incident.id,

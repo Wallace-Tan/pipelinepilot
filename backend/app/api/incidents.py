@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -13,6 +12,7 @@ from app.api.schemas import (
     IncidentCreateRequest, IncidentCreateResponse, IncidentDetailResponse, IncidentListResponse,
     InvestigationResponse, PolicyResponse, ReportResponse, ValidationResponse,
 )
+from app.config.paths import FIXTURE_ROOT, POLICY_PATH, PROJECT_ROOT, RECOMMENDATION_PATH, RUNBOOKS_ROOT
 from app.decision.adapters import CocoDecisionAdapter, FixtureDecisionAdapter
 from app.domain.contracts import ActorRole, AuditEvent, Feedback, Incident, IncidentStatus, PolicyDecision, PolicyDocument
 from app.integrations.coco import CocoCliClient
@@ -33,7 +33,6 @@ from app.skills.coordinator import SkillCoordinator
 
 
 router = APIRouter(prefix="/v1", tags=["incidents"])
-ROOT = Path(__file__).resolve().parents[3]
 
 
 def repos(request: Request):
@@ -47,8 +46,8 @@ def repos(request: Request):
 
 def fixture_decision_adapter() -> FixtureDecisionAdapter:
     return FixtureDecisionAdapter(RecommendationService(
-        ROOT / "data/fixtures/schema_drift/expected_recommendation.json",
-        KnowledgeRepository(ROOT / "data/runbooks"),
+        RECOMMENDATION_PATH,
+        KnowledgeRepository(RUNBOOKS_ROOT),
     ))
 
 
@@ -56,7 +55,7 @@ def coco_client(request: Request) -> CocoCliClient:
     settings = resources(request).settings
     return CocoCliClient(
         command=settings.coco_command,
-        workdir=ROOT,
+        workdir=PROJECT_ROOT,
         connection=settings.coco_connection,
         timeout_seconds=settings.coco_timeout_seconds,
     )
@@ -66,7 +65,7 @@ def decision_adapter(request: Request):
     fallback = fixture_decision_adapter()
     if not resources(request).settings.coco_enabled:
         return fallback
-    return CocoDecisionAdapter(coco_client(request), KnowledgeRepository(ROOT / "data/runbooks"), fallback)
+    return CocoDecisionAdapter(coco_client(request), KnowledgeRepository(RUNBOOKS_ROOT), fallback)
 
 
 def error(error: GovernanceError, correlation: str):
@@ -97,7 +96,7 @@ def create_incident(
     if replay is not None:
         return replay
     incident_repo, _, _, _, audit_repo, *_ = repos(request)
-    payload = json.loads((ROOT / "data/fixtures/schema_drift/incident.json").read_text(encoding="utf-8"))
+    payload = json.loads((FIXTURE_ROOT / "incident.json").read_text(encoding="utf-8"))
     incident = Incident.model_validate(payload)
     existing = incident_repo.get(incident.id)
     if existing:
@@ -118,7 +117,7 @@ def get_incident(request: Request, incident_id: str, identity: RequestIdentity =
     if incident is None:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
-    decision = PolicyEngine.from_path(ROOT / "data/policies/demo_policy.json").evaluate(incident, "schema_drift_recovery", ActorRole.OPERATOR)
+    decision = PolicyEngine.from_path(POLICY_PATH).evaluate(incident, "schema_drift_recovery", ActorRole.OPERATOR)
     return IncidentDetailResponse(incident=incident, evidence=evidence_repo.list_for_incident(incident_id), recommendation=recommendation_repo.get_for_incident(incident_id), policy_decision=decision, executions=execution_repo.list_for_incident(incident_id), approvals=approval_repo.list_for_incident(incident_id), audit=audit_repo.list(incident_id=incident_id))
 
 
@@ -133,7 +132,7 @@ def investigate(request: Request, incident_id: str, identity: RequestIdentity = 
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
     settings = resources(request).settings
-    skills = coco_skills(coco_client(request), ROOT / "data/fixtures/schema_drift") if settings.coco_enabled else fixture_skills(ROOT / "data/fixtures/schema_drift")
+    skills = coco_skills(coco_client(request), FIXTURE_ROOT) if settings.coco_enabled else fixture_skills(FIXTURE_ROOT)
     service = InvestigationService(incident_repo, evidence_repo, audit_repo, SkillCoordinator(skills), RedactionService(), identity.role)
     result = service.investigate(incident)
     evidence = evidence_repo.list_for_incident(incident_id)
@@ -154,7 +153,7 @@ def action_context(request: Request, incident_id: str, body: ActionRequest, iden
     if incident is None:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
-    policy = PolicyEngine.from_path(ROOT / "data/policies/demo_policy.json")
+    policy = PolicyEngine.from_path(POLICY_PATH)
     decision = body.policy_decision or policy.evaluate(incident, body.action, identity.role)
     evidence_ids = body.evidence_ids if body.evidence_ids is not None else incident.evidence_ids
     return incident, decision, evidence_ids
@@ -225,7 +224,7 @@ def report(request: Request, incident_id: str, identity: RequestIdentity = Depen
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
     executions = execution_repo.list_for_incident(incident_id)
-    return ReportResponse(incident=incident, recommendation=recommendation_repo.get_for_incident(incident_id), evidence=evidence_repo.list_for_incident(incident_id), policy_decision=PolicyEngine.from_path(ROOT / "data/policies/demo_policy.json").evaluate(incident, "schema_drift_recovery", ActorRole.OPERATOR), execution=executions[-1] if executions else None, validation=validation_repo.get_for_incident(incident_id), audit=audit_repo.list(incident_id=incident_id), feedback_count=feedback_repo.count_for_incident(incident_id))
+    return ReportResponse(incident=incident, recommendation=recommendation_repo.get_for_incident(incident_id), evidence=evidence_repo.list_for_incident(incident_id), policy_decision=PolicyEngine.from_path(POLICY_PATH).evaluate(incident, "schema_drift_recovery", ActorRole.OPERATOR), execution=executions[-1] if executions else None, validation=validation_repo.get_for_incident(incident_id), audit=audit_repo.list(incident_id=incident_id), feedback_count=feedback_repo.count_for_incident(incident_id))
 
 
 @router.post("/incidents/{incident_id}/feedback", response_model=FeedbackResponse)
@@ -248,7 +247,7 @@ def feedback(request: Request, incident_id: str, body: FeedbackRequest, identity
 
 @router.get("/policies/current", response_model=PolicyResponse)
 def current_policy(request: Request, identity: RequestIdentity = Depends(require_viewer)) -> PolicyResponse:
-    policy = PolicyEngine.from_path(ROOT / "data/policies/demo_policy.json")
+    policy = PolicyEngine.from_path(POLICY_PATH)
     if policy.policy is None:
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail={"code": "policy_unavailable", "message": "Active policy is unavailable."})

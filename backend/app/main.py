@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pathlib import Path
 from uuid import uuid4
 
+from app.api.dependencies import AppResources
 from app.api.demo import router as demo_router
 from app.api.health import router as health_router
-from app.api.incidents import router as incident_router, ROOT
+from app.api.incidents import router as incident_router
+from app.config.paths import PROJECT_ROOT
 from app.config.settings import get_settings
 from app.demo.seed import FixtureSeedService
 from app.persistence.database import Database
@@ -17,9 +18,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, version="0.1.0")
     database = Database(settings.database_path)
     connection = database.connect()
-    app.state.resources = type("Resources", (), {"settings": settings, "database": database, "connection": connection})()
-    app.state.root = ROOT
-    FixtureSeedService(ROOT).seed(connection)
+    app.state.resources = AppResources(settings=settings, database=database, connection=connection)
+    FixtureSeedService(PROJECT_ROOT).seed(connection)
     app.include_router(health_router)
     app.include_router(incident_router)
     app.include_router(demo_router)
