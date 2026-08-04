@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi.testclient import TestClient
 import pytest
 
@@ -85,6 +87,69 @@ def test_missing_approval_is_blocked_and_reset_is_repeatable(api_client) -> None
 
 def test_reset_and_status_are_role_and_mode_safe(api_client) -> None:
     client = api_client
-    assert client.get("/v1/demo/status").json()["adapters"]["snowflake_metadata"] == "fixture"
+    status = client.get("/v1/demo/status").json()
+    assert status["adapters"]["snowflake_metadata"] == "fixture"
+    assert status["adapter_status"]["snowflake_metadata"] == {"mode": "fixture", "status": "available", "source": "fixture", "reason": None}
+    assert status["adapter_status"]["decision"]["mode"] == "fixture"
     denied = client.post("/v1/demo/reset", headers=OPERATOR)
     assert denied.status_code == 403
+
+
+def test_live_coco_investigation_updates_truthful_adapter_status(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("PIPELINEPILOT_DATABASE_PATH", str(tmp_path / "coco-live.sqlite3"))
+    monkeypatch.setenv("PIPELINEPILOT_COCO_ENABLED", "true")
+    monkeypatch.setenv("PIPELINEPILOT_COCO_CONNECTION", "pipelinepilot_ro")
+    get_settings.cache_clear()
+
+    from app.integrations.coco import CocoCliClient
+
+    def fake_prompt_json(self, prompt: str, *, required_keys: set[str]):
+        if "summary" in required_keys:
+            return {
+                "summary": "CoCo returned sanitized live evidence.",
+                "evidence_type": "read_only_context",
+                "sanitized_payload": {"contains_pii": False, "adapter": "coco"},
+                "citations": [{"document_id": "airflow-live", "title": "Live source", "section": "Read-only result"}],
+            }
+        evidence_context = prompt.split("Evidence: ", 1)[1].split("\nRunbooks:", 1)[0]
+        evidence_ids = [item["id"] for item in json.loads(evidence_context)]
+        return {
+            "cause": "The live source and staging schemas differ.",
+            "confidence_band": "high",
+            "evidence_ids": evidence_ids,
+            "runbook_ids": ["runbook-schema-drift"],
+            "recommended_action": "Apply the controlled fixture recovery.",
+            "uncertainty": "Recovery remains fixture-only.",
+        }
+
+    monkeypatch.setattr(CocoCliClient, "prompt_json", fake_prompt_json)
+    api = TestClient(create_app())
+
+    response = api.post(f"/v1/incidents/{INCIDENT}/investigate", headers=OPERATOR)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["adapter_mode"] == "live"
+    assert payload["fallback_reason"] is None
+    assert all(item["mode"] == "live" for item in payload["evidence"])
+    assert all(item["source"] == "coco" for item in payload["adapter_status"].values())
+    assert api.get("/v1/demo/status").json()["adapters"]["decision"] == "live"
+
+
+def test_coco_unavailable_updates_truthful_fallback_status(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("PIPELINEPILOT_DATABASE_PATH", str(tmp_path / "coco-fallback.sqlite3"))
+    monkeypatch.setenv("PIPELINEPILOT_COCO_ENABLED", "true")
+    monkeypatch.setenv("PIPELINEPILOT_COCO_COMMAND", "cortex-command-not-installed")
+    get_settings.cache_clear()
+    api = TestClient(create_app())
+
+    response = api.post(f"/v1/incidents/{INCIDENT}/investigate", headers=OPERATOR)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["adapter_mode"] == "fixture"
+    assert "CoCo decision unavailable" in payload["fallback_reason"]
+    assert payload["adapter_status"]["decision"]["status"] == "degraded"
+    assert payload["adapter_status"]["decision"]["source"] == "fixture"
+    assert all(item["mode"] == "fixture" for item in payload["evidence"])
+    assert api.get("/v1/demo/status").json()["adapters"]["decision"] == "fixture"

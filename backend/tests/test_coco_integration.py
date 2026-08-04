@@ -6,7 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.domain.contracts import RuntimeMode
+from app.decision.adapters import CocoDecisionAdapter, FixtureDecisionAdapter
+from app.domain.contracts import Evidence, Incident, RuntimeMode
+from app.knowledge.services import KnowledgeRepository, RecommendationService
 from app.integrations.coco import CocoCliClient, CocoCliError
 from app.skills.adapters import coco_skills
 from app.skills.contracts import SkillContext, SkillStatus
@@ -55,3 +57,27 @@ def test_coco_context_retains_fixture_evidence_when_cli_is_unavailable() -> None
     assert result.status is SkillStatus.DEGRADED
     assert result.evidence is not None
     assert "fixture evidence retained" in (result.degradation_reason or "")
+
+
+def test_coco_decision_rejects_uncited_evidence_and_uses_fixture_fallback() -> None:
+    incident = Incident.model_validate(json.loads((ROOT / "data/fixtures/schema_drift/incident.json").read_text(encoding="utf-8")))
+    evidence = [Evidence.model_validate(json.loads(path.read_text(encoding="utf-8"))) for path in (ROOT / "data/fixtures/schema_drift").glob("*.json") if path.name != "incident.json"]
+
+    class InvalidCitationClient:
+        def prompt_json(self, prompt: str, *, required_keys: set[str]):
+            return {
+                "cause": "Unsupported claim",
+                "confidence_band": "high",
+                "evidence_ids": ["ev-not-available"],
+                "runbook_ids": ["runbook-schema-drift"],
+                "recommended_action": "Run the recovery.",
+                "uncertainty": "Unknown.",
+            }
+
+    runbooks = KnowledgeRepository(ROOT / "data/runbooks")
+    fallback = FixtureDecisionAdapter(RecommendationService(ROOT / "data/fixtures/schema_drift/expected_recommendation.json", runbooks))
+    result = CocoDecisionAdapter(InvalidCitationClient(), runbooks, fallback).decide(incident, evidence)
+
+    assert result.adapter_mode is RuntimeMode.FIXTURE
+    assert result.recommendation.evidence_ids
+    assert "CoCo decision unavailable" in (result.fallback_reason or "")
