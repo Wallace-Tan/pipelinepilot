@@ -118,6 +118,13 @@ class Evidence(StrictContract):
     collected_at: datetime
 
 
+class AdapterStatus(StrictContract):
+    mode: str = Field(min_length=1, max_length=40)
+    status: str = Field(min_length=1, max_length=40)
+    source: str = Field(min_length=1, max_length=40)
+    reason: str | None = Field(default=None, max_length=500)
+
+
 class Recommendation(StrictContract):
     schema_version: Literal["recommendation.v1"]
     id: SafeId

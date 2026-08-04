@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.contracts import (
-    Approval, ActorRole, Evidence, Incident, PolicyDecision, PolicyDocument,
+    AdapterStatus, Approval, ActorRole, Evidence, Incident, PolicyDecision, PolicyDocument,
     Recommendation, RecoveryExecution, ValidationResult,
 )
 
@@ -74,6 +74,7 @@ class InvestigationResponse(BaseModel):
     correlation_id: str
     degraded: bool
     adapter_mode: str
+    adapter_status: dict[str, AdapterStatus]
     fallback_reason: str | None = None
 
 
@@ -127,6 +128,7 @@ class DemoStatusResponse(BaseModel):
     incident_id: str
     database_ready: bool
     adapters: dict[str, str]
+    adapter_status: dict[str, AdapterStatus]
 
 
 class DemoResetResponse(BaseModel):

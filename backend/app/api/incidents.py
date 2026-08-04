@@ -25,6 +25,7 @@ from app.policy.engine import PolicyEngine
 from app.security.identity import RequestIdentity
 from app.security.redaction import RedactionService
 from app.services.errors import GovernanceError
+from app.services.adapter_status import investigation_adapter_status
 from app.services.governance import ApprovalService, build_execution_proposal
 from app.services.investigation import InvestigationService
 from app.services.recovery import RecoveryService, ValidationService
@@ -125,6 +126,7 @@ def get_incident(request: Request, incident_id: str, identity: RequestIdentity =
 def investigate(request: Request, incident_id: str, identity: RequestIdentity = Depends(require_operator), correlation: str = Depends(correlation_id), key: str = Depends(idempotency_key)) -> InvestigationResponse:
     replay = replay_idempotent(request, key, "incident.investigate", {"incident_id": incident_id}, InvestigationResponse)
     if replay is not None:
+        request.app.state.adapter_status = replay.adapter_status
         return replay
     incident_repo, evidence_repo, _, _, audit_repo, _, recommendation_repo, _, _ = repos(request)
     incident = incident_repo.get(incident_id)
@@ -142,7 +144,18 @@ def investigate(request: Request, incident_id: str, identity: RequestIdentity = 
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail={"code": "decision_unavailable", "message": "A validated recommendation could not be produced from the collected evidence.", "correlation_id": correlation}) from exc
     recommendation_repo.save(decision.recommendation)
-    response = InvestigationResponse(incident=result.incident, evidence=evidence, recommendation=decision.recommendation, correlation_id=correlation, degraded=result.degraded, adapter_mode=decision.adapter_mode.value, fallback_reason=decision.fallback_reason)
+    adapter_status = investigation_adapter_status(result.skill_results, decision)
+    request.app.state.adapter_status = adapter_status
+    response = InvestigationResponse(
+        incident=result.incident,
+        evidence=evidence,
+        recommendation=decision.recommendation,
+        correlation_id=correlation,
+        degraded=result.degraded,
+        adapter_mode=decision.adapter_mode.value,
+        fallback_reason=decision.fallback_reason,
+        adapter_status=adapter_status,
+    )
     remember_idempotent(request, key, "incident.investigate", {"incident_id": incident_id}, response)
     return response
 

@@ -11,6 +11,7 @@ from app.config.paths import PROJECT_ROOT
 from app.config.settings import get_settings
 from app.demo.seed import FixtureSeedService
 from app.persistence.database import Database
+from app.services.adapter_status import initial_adapter_status
 
 
 def create_app() -> FastAPI:
@@ -19,6 +20,7 @@ def create_app() -> FastAPI:
     database = Database(settings.database_path)
     connection = database.connect()
     app.state.resources = AppResources(settings=settings, database=database, connection=connection)
+    app.state.adapter_status = initial_adapter_status(settings.coco_enabled)
     FixtureSeedService(PROJECT_ROOT).seed(connection)
     app.include_router(health_router)
     app.include_router(incident_router)

@@ -7,11 +7,12 @@ from fastapi import APIRouter, Depends, Request
 
 from app.api.dependencies import correlation_id, idempotency_key, remember_idempotent, replay_idempotent, require_admin, require_viewer, resources
 from app.api.schemas import DemoResetResponse, DemoStatusResponse
-from app.config.paths import FIXTURE_ROOT, PROJECT_ROOT
+from app.config.paths import PROJECT_ROOT
 from app.domain.contracts import RuntimeMode
 from app.demo.seed import FixtureSeedService
 from app.persistence.repositories import IncidentRepository
 from app.security.identity import RequestIdentity
+from app.services.adapter_status import adapter_modes, initial_adapter_status
 
 
 router = APIRouter(prefix="/v1/demo", tags=["demo"])
@@ -26,24 +27,19 @@ def demo_status(request: Request, identity: RequestIdentity = Depends(require_vi
         database_ready = True
     except Exception:
         database_ready = False
-    adapter_mode = "coco" if app_resources.settings.coco_enabled else "fixture"
-    adapters = {
-        name: adapter_mode if (FIXTURE_ROOT / filename).exists() else "unavailable"
-        for name, filename in {
-            "monitoring": "monitoring_status.json",
-            "airflow_log": "airflow_parser_log.json",
-            "dbt": "dbt_context.json",
-            "snowflake_metadata": "snowflake_metadata.json",
-        }.items()
-    }
-    adapters["decision"] = adapter_mode
+    adapter_status = getattr(
+        request.app.state,
+        "adapter_status",
+        initial_adapter_status(app_resources.settings.coco_enabled),
+    )
     return DemoStatusResponse(
         schema_version="demo_status.v1",
         mode=app_resources.settings.mode,
         fixture="schema_drift",
         incident_id=incident.id if incident else "inc-retail-orders-20260723",
         database_ready=database_ready,
-        adapters=adapters,
+        adapters=adapter_modes(adapter_status),
+        adapter_status=adapter_status,
     )
 
 
@@ -58,6 +54,7 @@ def reset_demo(request: Request, identity: RequestIdentity = Depends(require_adm
         raise HTTPException(status_code=409, detail={"code": "fixture_only", "message": "Demo reset is available only in fixture mode.", "correlation_id": correlation})
     connection = app_resources.database.reset_fixture(app_resources.connection)
     request.app.state.resources = replace(app_resources, connection=connection)
+    request.app.state.adapter_status = initial_adapter_status(app_resources.settings.coco_enabled)
     incident = FixtureSeedService(PROJECT_ROOT).seed(connection)
     response = DemoResetResponse(
         schema_version="demo_reset.v1",
