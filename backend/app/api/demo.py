@@ -25,8 +25,9 @@ def demo_status(request: Request, identity: RequestIdentity = Depends(require_vi
     except Exception:
         database_ready = False
     fixture_root = request.app.state.root / "data/fixtures/schema_drift"
+    adapter_mode = "coco" if app_resources.settings.coco_enabled else "fixture"
     adapters = {
-        name: "fixture" if (fixture_root / filename).exists() else "unavailable"
+        name: adapter_mode if (fixture_root / filename).exists() else "unavailable"
         for name, filename in {
             "monitoring": "monitoring_status.json",
             "airflow_log": "airflow_parser_log.json",
@@ -34,6 +35,7 @@ def demo_status(request: Request, identity: RequestIdentity = Depends(require_vi
             "snowflake_metadata": "snowflake_metadata.json",
         }.items()
     }
+    adapters["decision"] = adapter_mode
     return DemoStatusResponse(
         schema_version="demo_status.v1",
         mode=app_resources.settings.mode,

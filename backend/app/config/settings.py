@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     mode: RuntimeMode = RuntimeMode.FIXTURE
     database_path: str = "./pipelinepilot.sqlite3"
     redaction_patterns: tuple[str, ...] = ("email", "card", "identifier")
+    coco_enabled: bool = False
+    coco_command: str = "cortex"
+    coco_connection: str | None = None
+    coco_timeout_seconds: float = 45.0
 
 
 @lru_cache

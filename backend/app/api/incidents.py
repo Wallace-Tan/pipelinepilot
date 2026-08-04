@@ -13,8 +13,9 @@ from app.api.schemas import (
     IncidentCreateRequest, IncidentCreateResponse, IncidentDetailResponse, IncidentListResponse,
     InvestigationResponse, PolicyResponse, ReportResponse, ValidationResponse,
 )
-from app.decision.adapters import FixtureDecisionAdapter
+from app.decision.adapters import CocoDecisionAdapter, FixtureDecisionAdapter
 from app.domain.contracts import ActorRole, AuditEvent, Feedback, Incident, IncidentStatus, PolicyDecision, PolicyDocument
+from app.integrations.coco import CocoCliClient
 from app.knowledge.services import KnowledgeRepository, RecommendationService
 from app.persistence.repositories import (
     ApprovalRepository, AuditRepository, EvidenceRepository, ExecutionRepository, FeedbackRepository,
@@ -27,7 +28,7 @@ from app.services.errors import GovernanceError
 from app.services.governance import ApprovalService, build_execution_proposal
 from app.services.investigation import InvestigationService
 from app.services.recovery import RecoveryService, ValidationService
-from app.skills.adapters import fixture_skills
+from app.skills.adapters import coco_skills, fixture_skills
 from app.skills.coordinator import SkillCoordinator
 
 
@@ -44,11 +45,28 @@ def repos(request: Request):
     )
 
 
-def decision_adapter() -> FixtureDecisionAdapter:
+def fixture_decision_adapter() -> FixtureDecisionAdapter:
     return FixtureDecisionAdapter(RecommendationService(
         ROOT / "data/fixtures/schema_drift/expected_recommendation.json",
         KnowledgeRepository(ROOT / "data/runbooks"),
     ))
+
+
+def coco_client(request: Request) -> CocoCliClient:
+    settings = resources(request).settings
+    return CocoCliClient(
+        command=settings.coco_command,
+        workdir=ROOT,
+        connection=settings.coco_connection,
+        timeout_seconds=settings.coco_timeout_seconds,
+    )
+
+
+def decision_adapter(request: Request):
+    fallback = fixture_decision_adapter()
+    if not resources(request).settings.coco_enabled:
+        return fallback
+    return CocoDecisionAdapter(coco_client(request), KnowledgeRepository(ROOT / "data/runbooks"), fallback)
 
 
 def error(error: GovernanceError, correlation: str):
@@ -114,10 +132,16 @@ def investigate(request: Request, incident_id: str, identity: RequestIdentity = 
     if incident is None:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
-    service = InvestigationService(incident_repo, evidence_repo, audit_repo, SkillCoordinator(fixture_skills(ROOT / "data/fixtures/schema_drift")), RedactionService(), identity.role)
+    settings = resources(request).settings
+    skills = coco_skills(coco_client(request), ROOT / "data/fixtures/schema_drift") if settings.coco_enabled else fixture_skills(ROOT / "data/fixtures/schema_drift")
+    service = InvestigationService(incident_repo, evidence_repo, audit_repo, SkillCoordinator(skills), RedactionService(), identity.role)
     result = service.investigate(incident)
     evidence = evidence_repo.list_for_incident(incident_id)
-    decision = decision_adapter().decide(result.incident, evidence)
+    try:
+        decision = decision_adapter(request).decide(result.incident, evidence)
+    except ValueError as exc:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail={"code": "decision_unavailable", "message": "A validated recommendation could not be produced from the collected evidence.", "correlation_id": correlation}) from exc
     recommendation_repo.save(decision.recommendation)
     response = InvestigationResponse(incident=result.incident, evidence=evidence, recommendation=decision.recommendation, correlation_id=correlation, degraded=result.degraded, adapter_mode=decision.adapter_mode.value, fallback_reason=decision.fallback_reason)
     remember_idempotent(request, key, "incident.investigate", {"incident_id": incident_id}, response)
