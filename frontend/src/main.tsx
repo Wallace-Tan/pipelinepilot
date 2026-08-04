@@ -183,6 +183,20 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">{paths[name]}</svg>;
 }
 
+function BrandMark() {
+  return (
+    <svg aria-hidden="true" className="brand-mark-svg" fill="none" viewBox="0 0 40 32">
+      <path className="brand-circuit" d="M5 7h7a5 5 0 0 1 5 5v3m-12 10h8a5 5 0 0 0 5-5v-3h8" />
+      <circle className="brand-node" cx="5" cy="7" r="2.5" />
+      <circle className="brand-node" cx="5" cy="25" r="2.5" />
+      <circle className="brand-node" cx="17" cy="5" r="2.5" />
+      <circle className="brand-node" cx="31" cy="24" r="2.5" />
+      <path className="brand-plane" d="m9 16 24-10-10 20-4-8-10-2Z" />
+      <path className="brand-plane-fold" d="m9 16 14 2-4 8" />
+    </svg>
+  );
+}
+
 function formatPolicyValue(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -319,7 +333,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand-lockup">
-          <div className="brand-mark"><Icon name="spark" size={17} /></div>
+          <div className="brand-mark"><BrandMark /></div>
           <div>
             <strong>PipelinePilot</strong>
             <span>Incident command</span>

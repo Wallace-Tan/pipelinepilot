@@ -24,6 +24,12 @@ This system adapts the supplied warm Lovable reference without copying its landi
 - Semantic status: muted emerald for available/success, amber for approval-required/degraded, red for blocked/failed. Always pair color with a text label.
 - Surface hierarchy comes from spacing, borders, and small tonal shifts—not from layered cards or gradients.
 
+### Brand mark
+
+- Use the compact circuit-and-plane mark in `frontend/public/pipelinepilot-mark.svg` for the app icon and favicon.
+- The dark ink container keeps the mark readable on parchment; the blue plane is the only accent and signals movement through a governed workflow.
+- Keep the mark paired with the PipelinePilot wordmark in the primary rail. Do not substitute the source bitmap, add a gradient, or place the mark in decorative marketing treatments.
+
 ## Tokens
 
 ```css
