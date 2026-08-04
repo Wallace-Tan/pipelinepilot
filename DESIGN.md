@@ -2,87 +2,148 @@
 
 ## Intent
 
-PipelinePilot is an evidence-first incident command center for data engineers. The interface should feel calm under pressure: dense enough for investigation, precise enough for governance, and expressive enough to make the workflow memorable without turning operations into a game.
+PipelinePilot is an incident command center, not a marketing page and not a chat toy. The visual system should feel warm, deliberate, and quiet under pressure: evidence is easy to scan, policy is unmistakable, and every action carries its operational context.
 
-This is an adapted system inspired by the observability density of Sentry and the precise product chrome of Linear. It is not a reproduction of either brand. Reference patterns: [Awesome DESIGN.md](https://github.com/voltagent/awesome-design-md), [Sentry analysis](https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/sentry/DESIGN.md), and [Linear analysis](https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/linear.app/DESIGN.md).
+This system adapts the supplied warm Lovable reference without copying its landing-page patterns. It keeps PipelinePilot’s information-dense command-center layout while replacing cold SaaS chrome with parchment, charcoal, restrained borders, and tactile controls.
 
-## Visual Theme
+## Anti-slop rules
 
-- Use a light cool-gray canvas with white surfaces and quiet blue-gray hairline borders.
-- Use lavender as the product accent for navigation, focus, and primary UI actions.
-- Use emerald for healthy, available, and fixture-mode signals.
-- Use amber for approval-required and degraded states; reserve red for failed or blocked states.
-- Prefer crisp 1px borders and restrained shadows over glassmorphism, gradients, glow, or decorative noise.
-- Keep the dashboard information-dense, but give the incident headline and active decision enough breathing room.
+- No gradients, glassmorphism, neon glow, decorative blobs, confetti, or ornamental AI imagery.
+- No fake live data, fake progress, fake confidence precision, or autonomous recovery language.
+- No oversized marketing hero inside the incident workflow; display type tops out at 36px.
+- No component exists only to make the screen look busy. Every visible element must explain state, evidence, authority, or next action.
+- Use one primary action per surface. Keep recovery controls subordinate to policy and approval context.
+- Prefer borders and whitespace to floating shadows. Use color only when it carries operational meaning.
+
+## Visual language
+
+- Foundation: warm parchment rather than white (`#f7f4ed`).
+- Ink: warm charcoal (`#1c1c1c`) with opacity-derived neutrals.
+- Containment: `#eceae4` borders, no default card shadows.
+- Interaction: charcoal controls with a restrained inset highlight; outline controls for secondary actions.
+- Semantic status: muted emerald for available/success, amber for approval-required/degraded, red for blocked/failed. Always pair color with a text label.
+- Surface hierarchy comes from spacing, borders, and small tonal shifts—not from layered cards or gradients.
 
 ## Tokens
 
 ```css
---canvas: #f4f6f8;
---surface-1: #ffffff;
---surface-2: #f7f9fb;
---surface-3: #edf1f5;
---hairline: #dbe2e9;
---hairline-strong: #bcc7d2;
---ink: #1d2733;
---ink-muted: #536273;
---ink-subtle: #748293;
---lavender: #6268d9;
---lavender-strong: #4c53c8;
---emerald: #16845f;
---amber: #9a650d;
---red: #b73d49;
---blue: #2868a7;
+:root {
+  --canvas: #f7f4ed;
+  --surface-1: #f7f4ed;
+  --surface-2: rgba(28, 28, 28, 0.03);
+  --surface-3: rgba(28, 28, 28, 0.04);
+  --ink: #1c1c1c;
+  --ink-strong: rgba(28, 28, 28, 0.83);
+  --ink-muted: rgba(28, 28, 28, 0.64);
+  --ink-subtle: #5f5f5d;
+  --hairline: #eceae4;
+  --hairline-strong: rgba(28, 28, 28, 0.4);
+  --focus: rgba(59, 130, 246, 0.5);
+  --emerald: #28745a;
+  --amber: #91651b;
+  --red: #a33d3d;
+  --blue: #3b82f6;
+  --control-radius: 6px;
+  --card-radius: 12px;
+  --panel-radius: 16px;
+  --shadow-inset: rgba(255, 255, 255, 0.2) 0 0.5px 0 inset,
+    rgba(0, 0, 0, 0.2) 0 0 0 0.5px inset,
+    rgba(0, 0, 0, 0.05) 0 1px 2px;
+  --shadow-focus: rgba(0, 0, 0, 0.1) 0 4px 12px;
+}
 ```
 
-Use an 8px spacing base: `4, 8, 12, 16, 24, 32, 48, 64px`. Use `6px` for controls, `10px` for cards, `14px` for large panels, and full pills only for statuses, roles, and mode labels.
+Do not introduce arbitrary near-duplicate neutrals. If a gray is needed, derive it from charcoal opacity. Semantic colors are the exception because incident states must remain distinguishable.
 
 ## Typography
 
-- Primary UI: Inter or the system sans stack.
-- Technical values: `ui-monospace`, SFMono-Regular, Menlo, Monaco, Consolas.
-- Page title: 30–36px, 650 weight, tight line-height.
-- Section title: 15–18px, 650 weight.
-- Body: 14–15px, 1.5 line-height.
-- Metadata/eyebrow: 11–12px, uppercase, 0.08em tracking.
-- Never use oversized marketing display type inside the operational dashboard.
+- Primary: `Camera Plain Variable` when available, falling back to `ui-sans-serif, system-ui, sans-serif`.
+- Body and controls: 14–15px, weight 400, line-height 1.5.
+- Page title: 30–36px, weight 600, line-height 1.08, letter-spacing `-0.9px`.
+- Section title: 16–18px, weight 600, line-height 1.2.
+- Card title: 14–16px, weight 400–600, line-height 1.3.
+- Metadata/eyebrow: 10–12px, weight 600, uppercase, letter-spacing `0.08em`.
+- Technical identifiers: `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`.
+- Weight 600 is the maximum. Hierarchy comes from size, spacing, and placement—not boldness.
 
 ## Layout
 
-- Desktop: 248px persistent rail plus a centered workspace capped at 1440px.
-- Header: incident identity on the left; mode, role, and system health on the right.
-- Main order: incident hero, workflow stepper, evidence and decision grid, audit timeline.
-- Evidence cards should expose source, status, timestamp, summary, and citation before expandable detail.
-- At narrow widths, collapse the rail into a top bar, stack cards, preserve 44px touch targets, and keep the incident status visible.
+- Desktop retains a 248px incident-command rail because navigation, environment, and actor context must remain visible during investigation.
+- Workspace is centered and capped at approximately 1440px with 20–56px horizontal padding.
+- Header keeps incident identity left-aligned and mode/role/system status visible on the right.
+- Overview order: incident identity → workflow → evidence/decision → audit → report.
+- Policy view order: policy identity → four summary facts → rule cards → read-only authority note.
+- Use the 8px rhythm: `4, 8, 12, 16, 24, 32, 48, 64px`. Use generous spacing only between meaningful sections.
+- Preserve 44px minimum touch targets for primary interactive controls on narrow screens.
 
-## Component Rules
+## Components
 
-- Buttons have visible hover, pressed, focus, and disabled states. Primary actions use lavender; dangerous actions use red only when an action is actually available.
-- Cards use a surface fill, 1px border, and no heavy shadow. Hover may lift by 1px and strengthen the border.
-- Status badges always include text, never color alone.
-- Fixture, sandbox, and live modes are always explicit in a badge or banner.
-- Approval-required states explain the policy reason beside the action state.
-- Degraded evidence remains visible and includes a safe reason; never silently omit it.
-- Future API actions must be labeled as preview/demo until wired to a governed endpoint.
+### Buttons
+
+- Primary: charcoal background, off-white text, 6px radius, 8px 16px padding, `--shadow-inset`.
+- Secondary: transparent parchment background, `1px solid var(--hairline-strong)`, charcoal text, 6px radius.
+- Tertiary: text action with underline or directional icon; never make it look like a primary CTA.
+- Dangerous action: red only when an executable destructive action is actually available, never for a hypothetical state.
+- Hover: slight border darkening or background tint. Pressed: opacity 0.8. Focus: 2px `--focus` ring plus offset.
+
+### Cards and panels
+
+- Standard card: parchment surface, 1px `--hairline`, 12px radius.
+- Large panel: same surface and border, 16px radius.
+- Compact evidence item: 8px radius.
+- No heavy shadows. A card can lift by 1px on hover only when it is interactive.
+- Avoid nesting more than two bordered containers without a clear information hierarchy.
+
+### Status and governance
+
+- Status badges are compact pills only for state, role, confidence band, and runtime mode.
+- Every badge contains readable text; never communicate status through color alone.
+- Approval-required states show the decision, risk, required approver, action, and reason together.
+- Fixture, sandbox, and live modes remain visible in banners and relevant cards.
+- Degraded evidence remains present with its degradation reason; never silently convert unavailable context into success.
+
+### Evidence
+
+- Evidence rows show source, availability, timestamp, summary, and citation before expansion.
+- Expansion reveals sanitized detail only. Raw logs, tokens, and PII never appear in the UI.
+- Citation labels use document ID and section, not vague “AI source” language.
+
+### Forms and feedback
+
+- Inputs use parchment background, `#eceae4` border, 6px radius, and charcoal text.
+- Placeholder text uses `--ink-subtle`; focus uses the blue accessibility ring.
+- Feedback is explicitly labelled operator feedback and remains subordinate to the report.
 
 ## Motion
 
-- Use CSS transitions and keyframes only; keep control transitions between 160–240ms.
-- Stagger initial panel reveals by 35–50ms, with a maximum total reveal of 300ms.
-- Animate evidence expansion with height/opacity and a subtle chevron rotation.
-- Animate workflow progress with a short width transition and a low-intensity active pulse.
-- Use toast/detail-panel entry with opacity and 4–8px translate only.
-- Do not animate semantic colors continuously. Avoid parallax, looping decoration, and motion during high-risk actions.
-- Under `prefers-reduced-motion: reduce`, remove stagger, pulse, transforms, and smooth scrolling.
+- CSS-only transitions between 160–240ms.
+- Panel reveal stagger may be used once, with a maximum total reveal of 300ms.
+- Evidence expansion may animate height/opacity and chevron rotation.
+- No looping decoration, parallax, animated gradients, or continuous semantic-color animation.
+- Under `prefers-reduced-motion: reduce`, remove stagger, pulses, transforms, and smooth scrolling.
 
 ## Accessibility
 
-- Use landmarks, headings, labelled controls, and live regions for filter changes.
-- Preserve visible keyboard focus with a lavender 2px outline and 2px offset.
-- Maintain readable contrast on all surfaces and pair every semantic color with text.
-- Do not use hover-only explanations; provide buttons, labels, or native titles as fallback.
-- Respect reduced motion and keep all interactions usable without a pointer.
+- Use landmarks, one clear page heading, logical heading levels, labelled controls, and live regions for loading/error state.
+- Preserve visible keyboard focus with a 2px ring and 3px offset.
+- Pair every semantic color with text and maintain readable contrast on parchment.
+- Never hide essential explanations behind hover alone.
+- Keep all workflow actions keyboard reachable and do not require drag, hover, or color perception.
 
-## Agent Prompt Guide
+## Responsive behavior
 
-When extending PipelinePilot UI, preserve the incident-command hierarchy, use the tokens above, keep operational status explicit, and prefer a small number of meaningful interactions. Do not add gradients, decorative illustrations, fake live data, or autonomous recovery controls. Every new state needs a readable label, a keyboard path, and a reduced-motion behavior.
+- At 980px, collapse the rail to an icon rail and stack the evidence/decision columns.
+- At 680px, replace the rail with a horizontal scrollable navigation row and stack all panels.
+- Policy summary cards move from four columns to two, then one. Rule metadata moves from four columns to two.
+- Preserve the incident state, runtime mode, and current action context near the top of the mobile view.
+
+## Agent prompt guide
+
+When extending the UI:
+
+1. Start from the tokens in this file; do not invent a new palette.
+2. Ask what operational decision the component clarifies.
+3. Keep the hierarchy calm: one heading, one primary action, visible evidence and authority.
+4. Add explicit loading, unavailable, denied, and degraded states with truthful copy.
+5. Test keyboard focus, narrow layout, and reduced motion.
+6. Do not label fixture behavior as live or imply that model output can override policy.

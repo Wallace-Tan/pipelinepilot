@@ -337,9 +337,9 @@ function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="rail-label">Environment</div>
-          <button className="environment-card" onClick={() => setNotice("Fixture mode uses sanitized evidence and does not execute recovery actions.")} type="button">
+          <button className="environment-card" onClick={() => setNotice(demoStatus?.adapters.decision === "coco" ? "CoCo is enabled for read-only context and decision support. Recovery remains governed by the backend policy and approval workflow." : "Fixture mode uses sanitized evidence and does not execute recovery actions.")} type="button">
             <span className="signal-dot is-emerald" />
-            <span><strong>Fixture mode</strong><small>Safe demo environment</small></span>
+            <span><strong>{demoStatus?.adapters.decision === "coco" ? "CoCo bridge" : "Fixture mode"}</strong><small>{demoStatus?.adapters.decision === "coco" ? "Read-only external context" : "Safe demo environment"}</small></span>
             <Icon name="chevron" size={15} />
           </button>
           <div className="user-chip"><span className="avatar">OP</span><span><strong>Operator</strong><small>Demo identity</small></span><span className="status-dot" /></div>
@@ -359,7 +359,7 @@ function App() {
         <div className="content-wrap">
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
-          {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · Snowflake metadata degraded by design</div>}
+          {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {demoStatus.adapters.decision === "coco" ? "CoCo-backed read-only context and decision" : "Fixture context and decision"} · {demoStatus.adapters.snowflake_metadata === "coco" ? "Snowflake metadata via CoCo" : "Snowflake metadata degraded by design"}</div>}
           {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
@@ -417,12 +417,12 @@ function App() {
                 <div className="fixture-actions">
                   {loading && <span className="muted-label">Loading live incident state…</span>}
                   {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
-                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">Investigate fixture incident</button>}
+                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{demoStatus?.adapters.decision === "coco" ? "Investigate with CoCo" : "Investigate fixture incident"}</button>}
                   {!loading && liveIncident.status === "Investigated" && <><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." })} type="button">Reject recovery</button></>}
                   {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
                   {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
-                <div className="preview-note"><span className="signal-dot is-amber" /><span>Fixture actions are governed by the server policy and remain visibly non-production.</span></div>
+                <div className="preview-note"><span className="signal-dot is-amber" /><span>{demoStatus?.adapters.decision === "coco" ? "CoCo context is read-only; recovery remains fixture-only and is governed by the server policy." : "Fixture actions are governed by the server policy and remain visibly non-production."}</span></div>
               </section>
               <section className="panel recommendation-panel animate-in delay-4">
                 <div className="section-heading"><div><span className="eyebrow">Decision support</span><h2>Root cause signal</h2></div><span className="confidence">High</span></div>
@@ -443,7 +443,7 @@ function App() {
             <div className="feedback-form"><input aria-label="Operator feedback" onChange={(event) => setFeedbackText(event.target.value)} placeholder="Add an operator correction" value={feedbackText} /><button className="secondary-button" disabled={!feedbackText.trim()} onClick={() => void submitFeedback()} type="button">Record feedback</button></div>
           </section>
 
-          <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />Fixture mode · sanitized evidence only</span><span>PipelinePilot v0.3 · governed by policy</span></footer>
+          <footer className="workspace-footer"><span><span className="signal-dot is-emerald" />{demoStatus?.adapters.decision === "coco" ? "CoCo bridge · read-only external context" : "Fixture mode · sanitized evidence only"}</span><span>PipelinePilot v0.3 · governed by policy</span></footer>
           </>}
         </div>
         {notice && <button className="notice-toast" onClick={() => setNotice(null)} type="button"><Icon name="spark" size={15} /><span>{notice}</span><span className="toast-dismiss">Dismiss</span></button>}
