@@ -15,6 +15,7 @@
 - Backend dev server: from `backend`, run `uv run uvicorn app.main:app --host 127.0.0.1 --port 8000`.
 - Frontend setup/build: from `frontend`, run `npm install` and `npm run build`.
 - Frontend dev server: from `frontend`, run `npm run dev`.
+- Browser proof: from `frontend`, run `npx playwright install chromium` once, then `npm run test:e2e`; set `PIPELINEPILOT_UV` only when `uv` is not on `PATH`.
 
 ## Coding Philosophy
 
