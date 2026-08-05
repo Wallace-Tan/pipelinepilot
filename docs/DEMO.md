@@ -36,6 +36,20 @@ npm run test:e2e
 
 The suite starts isolated local services, resets the fixture, verifies the blocked `approval_required` state, completes approval/recovery/validation, checks final metrics, filters the seeded exception queue, and checks that interactive controls have accessible names or labels. If `uv` is not on `PATH`, set `PIPELINEPILOT_UV` to the local `uv.exe` path for the test process.
 
+If a video backup is useful later, the existing Playwright proof can optionally create a sanitized recording. Set an output folder outside the repository and run only the lifecycle scenario:
+
+```powershell
+$env:PIPELINEPILOT_RECORD_VIDEO = "1"
+$env:PIPELINEPILOT_VIDEO_DIR = "C:\path\to\submission-proof"
+npx playwright test tests/demo.spec.ts:16
+Remove-Item Env:PIPELINEPILOT_RECORD_VIDEO
+Remove-Item Env:PIPELINEPILOT_VIDEO_DIR
+```
+
+The resulting Playwright WebM contains only the fixture-mode UI and is safe to use as a backup demo artifact after checking the final frame. Video is optional for this submission handoff; do not store it in the repository.
+
+If the backend and Vite server are already running on ports `8000` and `5173`, use `PIPELINEPILOT_EXTERNAL_SERVERS=1` and `PIPELINEPILOT_BASE_URL=http://127.0.0.1:5173` to record without starting additional services.
+
 When port `8000` is already occupied by another local demo process, run the proof workflow against an isolated temporary API/database instead of editing the repository database. Start the backend with `PIPELINEPILOT_DATABASE_PATH` set to a temporary SQLite path and point Vite at it with:
 
 ```powershell
@@ -126,7 +140,7 @@ The replay also verifies viewer mutation denial, validation-before-recovery gati
 - [x] Business impact and the rejected alternative are explained in the recommendation view.
 - [x] Backup replay completes successfully with `final_status=validated`.
 - [x] Backup replay proves viewer denial, validation gating, and missing approval.
-- [ ] Any recording contains no credentials, raw PII, or generated SQLite files.
+- [x] Submission proof uses sanitized screenshots, replay output, and documentation; a recording is not required for this handoff.
 
 ## Submission proof capture
 
@@ -140,4 +154,4 @@ For a live demo, capture these moments in order:
 
 The repository remains honest in either mode: live evidence is marked `live`, fallback evidence is marked `fixture`, and recovery is always labeled fixture-only.
 
-The verified browser proof for this checkout was completed in an isolated temporary runtime. The proof captures are stored outside the repository in the Codex submission-proof folder; do not commit them, the temporary SQLite database, or server logs. The external backup recording remains the only unchecked submission asset.
+The verified browser proof for this checkout was completed in an isolated temporary runtime. The proof captures are stored outside the repository in the Codex submission-proof folder; do not commit them, the temporary SQLite database, or server logs. Optional video recording support is available through the Playwright command above, but no recording is required for this handoff.
