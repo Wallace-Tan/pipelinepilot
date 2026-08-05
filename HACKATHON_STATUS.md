@@ -56,7 +56,7 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 - `frontend`: `npm.cmd run build` passes (TypeScript project build plus Vite production build).
 - `frontend`: no lint command is configured in `frontend/package.json`; no unsupported lint command is claimed.
-- `backend`: canonical commands remain `uv sync` and `uv run pytest`. In the current workstation, `uv` is unavailable and the existing local virtual environment points to a removed Python executable, so backend tests require environment repair before they can run.
+- `backend`: canonical commands remain `uv sync` and `uv run pytest`. `uv` is unavailable and the existing local virtual environment points to a removed Python executable, so the canonical launcher could not be used; with the bundled Python runtime and the intact environment packages, the full suite passes: `44 passed, 1 warning`.
 - `scripts/demo-replay.ps1`: documented as the API-level fallback replay; run it after backend dependencies are available.
 - No credentials, raw logs, committed SQLite database, or live-recovery claims are part of the submission slice.
 
