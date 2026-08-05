@@ -27,6 +27,15 @@ Open `http://127.0.0.1:5173/`. The UI must show `fixture`, `database ready`, and
 
 For a clean-checkout preflight, run `scripts/verify-submission.ps1` from the repository root. It verifies `uv` setup, backend tests, the frontend production build, and tracked-file hygiene before the browser walkthrough.
 
+The automated browser proof is configured in `frontend/playwright.config.ts`. From `frontend`, install the browser once and run:
+
+```powershell
+npx playwright install chromium
+npm run test:e2e
+```
+
+The suite starts isolated local services, resets the fixture, verifies the blocked `approval_required` state, completes approval/recovery/validation, checks final metrics, filters the seeded exception queue, and checks that interactive controls have accessible names or labels. If `uv` is not on `PATH`, set `PIPELINEPILOT_UV` to the local `uv.exe` path for the test process.
+
 When port `8000` is already occupied by another local demo process, run the proof workflow against an isolated temporary API/database instead of editing the repository database. Start the backend with `PIPELINEPILOT_DATABASE_PATH` set to a temporary SQLite path and point Vite at it with:
 
 ```powershell

@@ -52,9 +52,9 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 - [ ] Policy editing with version creation and admin review.
 - [x] Workbench agent/execution detail panel backed by persisted policy, approval, and execution API state.
-- [ ] Dedicated agent/execution detail pages backed by first-class API resources.
-- [ ] Cross-exception queue filtering and multiple seeded exceptions; the current search is intentionally local to the seeded demo.
-- [ ] Full browser automation and accessibility audit.
+- [x] Dedicated agent/execution detail pages backed by first-class `/agent` and `/executions/{execution_id}` API resources.
+- [x] Cross-exception queue filtering with multiple sanitized seeded records; secondary records remain read-only and the governed walkthrough stays on the schema-drift incident.
+- [x] Browser automation and accessibility smoke coverage for reset, investigation, policy denial, approval, recovery, validation, final metrics, and detail resources.
 - [ ] Live Cortex verification in the target environment.
 
 ### Deferred by design
@@ -70,6 +70,7 @@ The product remains positioned as the governed recovery layer between CoCo inves
 - `scripts/demo-replay.ps1`: now parses PowerShell error envelopes reliably and verifies viewer denial, validation-before-recovery gating, missing approval, recovery, validation, and final report output against `scripts/demo-replay.expected.json`.
 - `scripts/verify-submission.ps1 -SkipInstall` passes the clean-checkout preflight: backend tests, frontend build, and tracked-file hygiene report zero sensitive tracked files.
 - Browser proof: an isolated frontend/backend run completed reset, investigation, evidence review, pre-approval denial, operator approval, fixture recovery, validation, Command Center refresh, and Audit/RCA verification without database edits.
+- Browser automation: `npm run test:e2e` passes two Playwright scenarios, including the complete governed lifecycle, queue filtering, named-control checks, and input-label checks. Chromium installation is required once per clean machine.
 - No credentials, raw logs, committed SQLite database, or live-recovery claims are part of the submission slice.
 
 ## Demo risk and mitigation

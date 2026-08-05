@@ -112,9 +112,11 @@ sequenceDiagram
 | `GET /v1/incidents` | List incidents | Viewer |
 | `POST /v1/incidents` | Create/ingest seeded incident | Operator |
 | `GET /v1/incidents/{id}` | Detail, evidence, recommendation | Viewer |
+| `GET /v1/incidents/{id}/agent` | Typed agent/evidence/recommendation resource | Viewer |
 | `POST /v1/incidents/{id}/investigate` | Run investigation workflow | Operator |
 | `POST /v1/incidents/{id}/approvals` | Approve/reject pending action | Operator |
 | `POST /v1/incidents/{id}/executions` | Start a policy-authorized recovery | Operator |
+| `GET /v1/incidents/{id}/executions/{execution_id}` | Typed execution, approval, validation, and audit resource | Viewer |
 | `POST /v1/incidents/{id}/validate` | Run validation | Operator |
 | `GET /v1/incidents/{id}/report` | Read RCA | Viewer |
 | `POST /v1/incidents/{id}/feedback` | Record correction | Operator |
