@@ -630,6 +630,7 @@ function App() {
   const [editingAction, setEditingAction] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   const integration = useMemo(() => {
     const details = demoStatus?.adapter_status;
@@ -681,10 +682,11 @@ function App() {
       setLiveIncident(mapIncident(detail.incident));
       setLiveEvidence(detail.evidence.map(mapEvidence));
       const approvals = detail.approvals ?? [];
-      setLiveAudit([
-        ...detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" as const : "neutral" as const })),
-        ...approvals.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: `Operator ${entry.decision}`, detail: entry.reason, actor: entry.actor_role, tone: entry.decision === "approved" ? "success" as const : "warning" as const })),
-      ].sort((left, right) => right.time.localeCompare(left.time)));
+      const timeline = [
+        ...detail.audit.map((entry) => ({ createdAt: entry.created_at, action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" as const : "neutral" as const })),
+        ...approvals.map((entry) => ({ createdAt: entry.created_at, action: `Operator ${entry.decision}`, detail: entry.reason, actor: entry.actor_role, tone: entry.decision === "approved" ? "success" as const : "warning" as const })),
+      ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+      setLiveAudit(timeline.map(({ createdAt, ...entry }) => ({ ...entry, time: new Date(createdAt).toLocaleTimeString() })));
       if (detail.recommendation) {
         setLivePolicy({ decision: "Approval required", risk: "High", reason: detail.recommendation.uncertainty, action: detail.recommendation.recommended_action });
         setDraftAction((current) => editingAction ? current : detail.recommendation?.recommended_action ?? current);
@@ -743,6 +745,8 @@ function App() {
   };
 
   const runAction = async (path: string, body?: object, key = "ui-schema-drift-recovery") => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/${path}`, { method: "POST", headers: { ...API_HEADERS, "Idempotency-Key": key }, body: body ? JSON.stringify(body) : undefined });
       if (!response.ok) {
@@ -756,6 +760,8 @@ function App() {
     } catch (error) {
       await refresh().catch(() => undefined);
       setNotice(error instanceof Error ? error.message : "Action failed.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -790,7 +796,6 @@ function App() {
   const openWorkbench = () => {
     setActiveNav("Workbench");
     setSearchOpen(false);
-    window.setTimeout(() => document.getElementById("incident-overview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   };
 
   const openAuditLog = () => {
@@ -819,7 +824,7 @@ function App() {
         <div className="rail-label">Workspace</div>
         <nav className="main-nav">
           {[{ label: "Overview", icon: "grid" as IconName }, { label: "Workbench", icon: "activity" as IconName }, { label: "Agent detail", icon: "spark" as IconName }, { label: "Execution detail", icon: "terminal" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
-            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { if (item.label === "Workbench") openWorkbench(); else { setActiveNav(item.label); setSearchOpen(false); if (item.label === "Agent detail") void reloadAgentResource(); if (item.label === "Execution detail") void reloadExecutionResource(); } }} type="button">
+            <button aria-label={item.label} className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { if (item.label === "Workbench") openWorkbench(); else { setActiveNav(item.label); setSearchOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); if (item.label === "Agent detail") void reloadAgentResource(); if (item.label === "Execution detail") void reloadExecutionResource(); } }} type="button">
               <Icon name={item.icon} />
               <span>{item.label}</span>
               {item.label === "Workbench" && <span className="nav-count">1</span>}
@@ -842,7 +847,7 @@ function App() {
           <div className="breadcrumb"><span>Workspace</span><Icon name="chevron" size={13} /><strong>{activeNav}</strong></div>
           <div className="topbar-actions">
             <button className={`topbar-button ${searchOpen ? "is-active" : ""}`} onClick={() => setSearchOpen((current) => !current)} title="Search workspace" type="button"><Icon name="search" size={16} /><span>Search</span></button>
-            <button className="topbar-button" onClick={() => void resetDemo()} title="Admin-only fixture reset using the explicit Admin demo identity" type="button">Reset fixture · Admin demo</button>
+            <button className="topbar-button" disabled={loading || actionLoading} onClick={() => void resetDemo()} title="Admin-only fixture reset using the explicit Admin demo identity" type="button">Reset fixture · Admin demo</button>
             <button className="icon-button" onClick={() => setNotice("All fixture adapters are responding. Snowflake metadata is marked degraded by design.")} title="System health" type="button"><span className="status-dot is-emerald" /><Icon name="activity" size={16} /></button>
           </div>
           {searchOpen && <div className="workspace-search" role="search">
@@ -925,13 +930,14 @@ function App() {
                 <div className="policy-action"><div className="section-heading"><span className="eyebrow">Proposed action</span><button className="text-action action-edit" onClick={() => setEditingAction((current) => !current)} type="button">{editingAction ? "Close editor" : "Edit proposal"}</button></div>{editingAction ? <><textarea aria-label="Edit proposed action" className="action-editor" onChange={(event) => setDraftAction(event.target.value)} value={draftAction} /><small className="editor-note">Edit the operator-facing recovery plan. The canonical policy action remains <code>schema_drift_recovery</code>.</small><button className="text-action" onClick={() => { setEditingAction(false); setNotice("Edited recovery plan will be captured in the approval justification."); }} type="button">Save proposed action <Icon name="arrow" size={14} /></button></> : <p>{draftAction}</p>}</div>
                 <p className="policy-reason">{livePolicy.reason}</p>
                 <button className="secondary-button" onClick={() => setNotice(livePolicy.reason)} type="button"><Icon name="shield" size={15} />Explain policy gate</button>
-                <div className="fixture-actions">
+                <div className="fixture-actions" aria-busy={actionLoading}>
+                  {actionLoading && <span className="muted-label" role="status">Working through the governed action…</span>}
                   {loading && <span className="muted-label">Loading live incident state…</span>}
-                  {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
-                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{integration.actionLabel}</button>}
-                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, recoveryProposalKey)} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" onClick={approveRecovery} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." }, `ui-schema-drift-rejection-${Date.now()}`)} type="button">Reject recovery</button></>}
-                  {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
-                  {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
+                  {apiError && <button className="secondary-button" disabled={actionLoading} onClick={() => void refresh()} type="button">Retry API connection</button>}
+                  {!loading && liveIncident.status === "Created" && <button className="secondary-button" disabled={actionLoading} onClick={() => void runAction("investigate")} type="button">{integration.actionLabel}</button>}
+                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" disabled={actionLoading} onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, recoveryProposalKey)} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" disabled={actionLoading} onClick={approveRecovery} type="button">Approve fixture recovery</button><button className="secondary-button" disabled={actionLoading} onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." }, `ui-schema-drift-rejection-${Date.now()}`)} type="button">Reject recovery</button></>}
+                  {!loading && liveIncident.status === "Approved" && <button className="secondary-button" disabled={actionLoading} onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
+                  {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" disabled={actionLoading} onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
                 <div className="preview-note"><span className="signal-dot is-amber" /><span>{integration.notice}</span></div>
               </section>
@@ -940,8 +946,8 @@ function App() {
                  <p className="root-cause">{report?.recommendation?.cause ?? "Upstream raw orders added order_channel, but the staging projection was not updated before the daily run."}</p>
                  <div className="signal-row"><span><Icon name="spark" size={14} />{report?.recommendation?.evidence_ids.length ?? 4} supporting sources</span><span><Icon name="file" size={14} />{report?.recommendation?.runbook_ids.length ?? 1} cited runbook</span></div>
                  <div className="impact-grid">
-                   <div><span className="eyebrow">Business impact</span><p>{report?.recommendation?.impact ?? businessImpact.summary}</p><small>{businessImpact.affected}</small></div>
-                   <div><span className="eyebrow">Alternative considered</span><p>{report?.recommendation?.alternatives[0]?.action ?? businessImpact.alternative}</p><small>{report?.recommendation?.alternatives[0]?.reason ?? businessImpact.alternativeReason}</small></div>
+                   <div className="impact-card impact-card-business"><span className="eyebrow">Business impact</span><p>{report?.recommendation?.impact ?? businessImpact.summary}</p><small>{businessImpact.affected}</small></div>
+                   <div className="impact-card impact-card-alternative"><span className="eyebrow">Alternative considered</span><p>{report?.recommendation?.alternatives[0]?.action ?? businessImpact.alternative}</p><small>{report?.recommendation?.alternatives[0]?.reason ?? businessImpact.alternativeReason}</small></div>
                  </div>
               </section>
             </aside>
