@@ -52,6 +52,19 @@ def test_migrations_enable_foreign_keys_and_persist_records(tmp_path) -> None:
     assert reopened.execute("SELECT name FROM sqlite_master WHERE type='index' AND name='incidents_status_idx'").fetchone()
 
 
+def test_fixture_reset_rebuilds_schema_without_replacing_database_file(tmp_path) -> None:
+    database = Database(tmp_path / "pipelinepilot.sqlite3")
+    connection = database.connect()
+    IncidentRepository(connection).save(incident())
+
+    reset_connection = database.reset_fixture(connection)
+
+    assert reset_connection is connection
+    assert IncidentRepository(reset_connection).get("inc-test-001") is None
+    assert reset_connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    assert reset_connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 5
+
+
 def test_audit_is_append_only_and_requires_existing_incident(tmp_path) -> None:
     connection = Database(tmp_path / "pipelinepilot.sqlite3").connect()
     IncidentRepository(connection).save(incident())

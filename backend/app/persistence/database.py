@@ -21,10 +21,26 @@ class Database:
         return connection
 
     def reset_fixture(self, connection: sqlite3.Connection) -> sqlite3.Connection:
-        connection.close()
-        if str(self.path) != ":memory:" and self.path.exists():
-            self.path.unlink()
-        return self.connect()
+        # Rebuild the schema in place instead of unlinking the database file.
+        # Windows can keep a SQLite file handle active for the lifetime of the
+        # application process, even after connection.close(), which makes an
+        # unlink-based reset fail with WinError 32.
+        connection.execute("PRAGMA foreign_keys = OFF")
+        connection.commit()
+        table_names = [
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+            )
+        ]
+        for table_name in table_names:
+            escaped_name = table_name.replace('"', '""')
+            connection.execute(f'DROP TABLE IF EXISTS "{escaped_name}"')
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.commit()
+        self.apply_migrations(connection)
+        return connection
 
     @staticmethod
     def apply_migrations(connection: sqlite3.Connection) -> None:
