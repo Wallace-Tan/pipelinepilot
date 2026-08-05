@@ -41,6 +41,16 @@ type AuditEntry = {
   tone: "neutral" | "success" | "warning";
 };
 
+type RunbookEntry = {
+  id: string;
+  title: string;
+  purpose: string;
+  status: "matched" | "available";
+  owner: string;
+  lastVerified: string;
+  steps: string[];
+};
+
 type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; mode: string; collected_at: string; citations: { title: string; section: string }[] };
 type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; approvals: { created_at: string; decision: string; reason: string; actor_role: string }[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
@@ -189,6 +199,36 @@ const audit: AuditEntry[] = [
   { time: "09:18:00", action: "Incident created", detail: "retail_orders_daily run failed", actor: "monitoring", tone: "warning" },
 ];
 
+const runbooks: RunbookEntry[] = [
+  {
+    id: "runbook-schema-drift",
+    title: "Schema Drift Response",
+    purpose: "Confirm a source schema change, compare the staging projection, and replay only the affected downstream models.",
+    status: "matched",
+    owner: "Data Platform",
+    lastVerified: "23 Jul 2026",
+    steps: ["Collect monitoring, sanitized logs, dbt context, and read-only metadata", "Compare source metadata with staging projections", "Validate downstream model contracts and freshness", "Update the staging projection, rerun the affected chain, and validate"],
+  },
+  {
+    id: "runbook-dbt-freshness",
+    title: "dbt Freshness Failure",
+    purpose: "Identify the stale source and affected downstream models before selecting the minimum recovery scope.",
+    status: "available",
+    owner: "Data Platform",
+    lastVerified: "18 Jul 2026",
+    steps: ["Identify the stale source and last successful load", "List affected downstream models", "Validate model dependencies and warehouse availability", "Run the minimum affected model selection after policy review"],
+  },
+  {
+    id: "runbook-airflow-retry",
+    title: "Airflow Retry and Run Failure",
+    purpose: "Determine whether a failed task is transient, idempotent, and eligible for a governed retry.",
+    status: "available",
+    owner: "Data Platform",
+    lastVerified: "18 Jul 2026",
+    steps: ["Confirm DAG, task, run ID, retry count, and current state", "Match a sanitized failure signature", "Check transient and idempotent retry criteria", "Bind any retry or clear-task action to policy and idempotency"],
+  },
+];
+
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
     activity: <><path d="M3 12h4l2-7 4 14 2-7h6" /><path d="M3 5h.01M21 19h.01" /></>,
@@ -334,6 +374,87 @@ function CommandCenter({
   );
 }
 
+function RunbooksView({ onOpenWorkbench, onNotice }: { onOpenWorkbench: () => void; onNotice: (message: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(runbooks[0].id);
+  const filtered = runbooks.filter((runbook) => `${runbook.title} ${runbook.purpose} ${runbook.id}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const selected = filtered.find((runbook) => runbook.id === selectedId) ?? filtered[0] ?? null;
+
+  return (
+    <div className="runbooks-view animate-in">
+      <section className="page-heading">
+        <div>
+          <span className="eyebrow">Operational knowledge</span>
+          <h1>Runbook library</h1>
+          <p className="subhead">The cited procedures that keep a recovery decision constrained and reviewable.</p>
+        </div>
+        <span className="page-readiness"><span className="status-dot is-emerald" />Fixture catalog</span>
+      </section>
+
+      <section className="runbook-layout">
+        <div className="panel runbook-list-panel">
+          <div className="section-heading"><div><span className="eyebrow">Matched procedures</span><h2>{filtered.length} runbooks</h2></div><span className="count-badge">1 cited</span></div>
+          <label className="search-field"><Icon name="search" size={15} /><span className="sr-only">Search runbooks</span><input aria-label="Search runbooks" onChange={(event) => setQuery(event.target.value)} placeholder="Search runbooks" value={query} /></label>
+          <div className="runbook-list" role="list">
+            {filtered.map((runbook) => <button className={`runbook-list-item ${selected?.id === runbook.id ? "is-selected" : ""}`} key={runbook.id} onClick={() => setSelectedId(runbook.id)} type="button">
+              <span className="runbook-list-icon"><Icon name="file" size={16} /></span>
+              <span><strong>{runbook.title}</strong><small>{runbook.id}</small></span>
+              <span className={`runbook-status is-${runbook.status}`}>{runbook.status === "matched" ? "Matched" : "Available"}</span>
+            </button>)}
+            {filtered.length === 0 && <p className="empty-state">No runbooks match this search.</p>}
+          </div>
+        </div>
+
+        {selected && <article className="panel runbook-detail-panel">
+          <div className="eyebrow-row"><span className="eyebrow">{selected.id}</span><span className={`runbook-status is-${selected.status}`}>{selected.status === "matched" ? "Matched to incident" : "Available"}</span></div>
+          <h2>{selected.title}</h2>
+          <p className="runbook-purpose">{selected.purpose}</p>
+          <div className="runbook-meta"><span><b>Owner</b>{selected.owner}</span><span><b>Last verified</b>{selected.lastVerified}</span><span><b>Scope</b>Fixture incident</span></div>
+          <div className="runbook-steps"><span className="eyebrow">Procedure outline</span><ol>{selected.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></div>
+          {selected.status === "matched" && <button className="secondary-button" onClick={onOpenWorkbench} type="button">Open governed workbench <Icon name="arrow" size={14} /></button>}
+          {selected.status === "available" && <button className="secondary-button" onClick={() => onNotice("Runbook preview is available; execution still requires a cited recommendation, policy decision, and Operator approval.")} type="button">Preview boundary note <Icon name="shield" size={14} /></button>}
+        </article>}
+      </section>
+
+      <div className="readiness-note"><Icon name="shield" size={15} /><span><strong>Submission boundary:</strong> this is a sanitized, read-only runbook catalog for the demo. Versioned production ownership, authoring, permissions, and change publishing are not ready and are intentionally outside this slice.</span></div>
+    </div>
+  );
+}
+
+function AuditLogView({ entries, onOpenWorkbench }: { entries: AuditEntry[]; onOpenWorkbench: () => void }) {
+  const [query, setQuery] = useState("");
+  const filtered = entries.filter((entry) => `${entry.action} ${entry.detail} ${entry.actor}`.toLowerCase().includes(query.trim().toLowerCase()));
+
+  return (
+    <div className="audit-view animate-in">
+      <section className="page-heading">
+        <div>
+          <span className="eyebrow">Traceability workspace</span>
+          <h1>Audit log</h1>
+          <p className="subhead">An incident-scoped view of investigation, governance, and recovery events.</p>
+        </div>
+        <span className="page-readiness"><span className="status-dot is-emerald" />Append-only events</span>
+      </section>
+
+      <section className="audit-summary-grid" aria-label="Audit summary">
+        <div className="panel metric-card"><span className="eyebrow">Events shown</span><strong>{filtered.length}</strong><small>{entries.length} incident events loaded</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Actors</span><strong>{new Set(entries.map((entry) => entry.actor)).size}</strong><small>System and demo integrations</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Scope</span><strong>1</strong><small>Seeded incident</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Recovery writes</span><strong>0</strong><small>Fixture boundary only</small></div>
+      </section>
+
+      <section className="panel audit-full-panel">
+        <div className="section-heading"><div><span className="eyebrow">Event stream</span><h2>retail_orders_daily</h2></div><button className="text-action" onClick={onOpenWorkbench} type="button">Back to workbench <Icon name="arrow" size={14} /></button></div>
+        <label className="search-field audit-search"><Icon name="search" size={15} /><span className="sr-only">Filter audit events</span><input aria-label="Filter audit events" onChange={(event) => setQuery(event.target.value)} placeholder="Filter by action or actor" value={query} /></label>
+        <div className="audit-list audit-list-full">{filtered.map((entry) => <div className="audit-entry" key={`${entry.time}-${entry.action}`}><span className={`audit-marker is-${entry.tone}`} /><time>{entry.time}</time><div><strong>{entry.action}</strong><span>{entry.detail}</span></div><small>{entry.actor}</small></div>)}</div>
+        {filtered.length === 0 && <p className="empty-state">No audit events match this filter.</p>}
+      </section>
+
+      <div className="readiness-note"><Icon name="shield" size={15} /><span><strong>Submission boundary:</strong> the demo proves event ordering and actor attribution for one seeded incident. Cross-incident retention, export, advanced filtering, and production identity federation are not ready and are intentionally not implied.</span></div>
+    </div>
+  );
+}
+
 function App() {
   const [activeNav, setActiveNav] = useState("Overview");
   const [filter, setFilter] = useState<EvidenceFilter>("all");
@@ -352,6 +473,8 @@ function App() {
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [draftAction, setDraftAction] = useState(policy.action);
   const [editingAction, setEditingAction] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const integration = useMemo(() => {
     const details = demoStatus?.adapter_status;
@@ -447,6 +570,18 @@ function App() {
     [filter, liveEvidence],
   );
 
+  const searchMatches = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    const items = [
+      { label: liveIncident.pipeline, detail: `${liveIncident.runId} Â· ${liveIncident.status}`, action: "incident" },
+      ...liveEvidence.map((item) => ({ label: item.sourceLabel, detail: item.summary, action: "evidence" })),
+      ...runbooks.map((runbook) => ({ label: runbook.title, detail: runbook.id, action: "runbook" })),
+      ...liveAudit.map((entry) => ({ label: entry.action, detail: `${entry.actor} Â· ${entry.detail}`, action: "audit" })),
+    ];
+    return items.filter((item) => `${item.label} ${item.detail}`.toLowerCase().includes(query)).slice(0, 6);
+  }, [liveAudit, liveEvidence, liveIncident, searchQuery]);
+
   const focusWorkflow = (step: WorkflowStep) => {
     document.getElementById(step.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
     setNotice(`${step.label}: ${step.description}`);
@@ -454,7 +589,13 @@ function App() {
 
   const openWorkbench = () => {
     setActiveNav("Workbench");
+    setSearchOpen(false);
     window.setTimeout(() => document.getElementById("incident-overview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
+
+  const openAuditLog = () => {
+    setActiveNav("Audit log");
+    setSearchOpen(false);
   };
 
   const approveRecovery = () => {
@@ -478,7 +619,7 @@ function App() {
         <div className="rail-label">Workspace</div>
         <nav className="main-nav">
           {[{ label: "Overview", icon: "grid" as IconName }, { label: "Workbench", icon: "activity" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
-            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { setActiveNav(item.label); if (item.label === "Workbench") openWorkbench(); else if (item.label !== "Overview" && item.label !== "Policy") setNotice(`${item.label} view is not part of this judge-ready vertical slice.`); }} type="button">
+            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { if (item.label === "Workbench") openWorkbench(); else { setActiveNav(item.label); setSearchOpen(false); } }} type="button">
               <Icon name={item.icon} />
               <span>{item.label}</span>
               {item.label === "Workbench" && <span className="nav-count">1</span>}
@@ -500,17 +641,22 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><span>Workspace</span><Icon name="chevron" size={13} /><strong>{activeNav}</strong></div>
           <div className="topbar-actions">
-            <button className="topbar-button" onClick={() => setNotice("Global search will connect to incident and evidence APIs in Milestone 6.")} title="Search workspace" type="button"><Icon name="search" size={16} /><span>Search</span></button>
+            <button className={`topbar-button ${searchOpen ? "is-active" : ""}`} onClick={() => setSearchOpen((current) => !current)} title="Search workspace" type="button"><Icon name="search" size={16} /><span>Search</span></button>
             <button className="topbar-button" onClick={() => void resetDemo()} title="Admin-only fixture reset using the explicit Admin demo identity" type="button">Reset fixture · Admin demo</button>
             <button className="icon-button" onClick={() => setNotice("All fixture adapters are responding. Snowflake metadata is marked degraded by design.")} title="System health" type="button"><span className="status-dot is-emerald" /><Icon name="activity" size={16} /></button>
           </div>
+          {searchOpen && <div className="workspace-search" role="search">
+            <label className="search-field"><Icon name="search" size={15} /><span className="sr-only">Search workspace</span><input aria-label="Search workspace" autoFocus onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search incident, evidence, runbook, or audit" value={searchQuery} /></label>
+            {searchQuery.trim() && <div className="search-results">{searchMatches.length > 0 ? searchMatches.map((item) => <button key={`${item.action}-${item.label}`} onClick={item.action === "audit" ? openAuditLog : openWorkbench} type="button"><strong>{item.label}</strong><small>{item.detail}</small></button>) : <p className="empty-state">No workspace matches.</p>}</div>}
+            {!searchQuery.trim() && <p className="search-hint">Local demo search covers the seeded incident, evidence, runbook citations, and audit events.</p>}
+          </div>}
         </header>
 
         <div className="content-wrap">
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
           {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {integration.label} · {integration.detail} · recovery fixture-only</div>}
-          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} /> : <>
+          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} /> : activeNav === "Runbooks" ? <RunbooksView onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : activeNav === "Audit log" ? <AuditLogView entries={liveAudit} onOpenWorkbench={openWorkbench} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
               <div className="eyebrow-row"><span className="eyebrow">Exception Workbench</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} priority</span></div>
@@ -600,7 +746,7 @@ function App() {
           </div>
 
           <section className="panel audit-panel animate-in delay-4" id="audit-timeline">
-            <div className="section-heading"><div><span className="eyebrow">Traceability</span><h2>Audit timeline</h2></div><button className="text-action" onClick={() => setNotice("Full audit filtering will be available with the Milestone 6 API.")} type="button">View full log <Icon name="arrow" size={14} /></button></div>
+            <div className="section-heading"><div><span className="eyebrow">Traceability</span><h2>Audit timeline</h2></div><button className="text-action" onClick={openAuditLog} type="button">View full log <Icon name="arrow" size={14} /></button></div>
             <div className="audit-list">{liveAudit.map((entry) => <div className="audit-entry" key={`${entry.time}-${entry.action}`}><span className={`audit-marker is-${entry.tone}`} /><time>{entry.time}</time><div><strong>{entry.action}</strong><span>{entry.detail}</span></div><small>{entry.actor}</small></div>)}</div>
           </section>
 

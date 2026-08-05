@@ -36,6 +36,9 @@ The product remains positioned as the governed recovery layer between CoCo inves
 - [x] Operator can approve, reject, or edit the operator-facing recovery plan.
 - [x] Status and metrics refresh after each governed action.
 - [x] Audit timeline shows approval outcome and justification.
+- [x] Runbook library provides a matched procedure, searchable fixture catalog, and a direct workbench handoff.
+- [x] Audit log provides an incident-scoped event stream with local filtering and explicit fixture-boundary labeling.
+- [x] Workspace search covers the seeded incident, evidence, runbook citations, and audit events without implying a production search service.
 - [x] Fixture recovery and validation reach `VALIDATED`.
 - [x] Frontend production build passes.
 - [x] README, demo script, fallback path, reset command, and live-mode honesty are documented.
@@ -44,7 +47,7 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 - [ ] Policy editing with version creation and admin review.
 - [ ] Dedicated agent/execution detail pages backed by first-class API resources.
-- [ ] Queue filtering, search, and multiple seeded exceptions.
+- [ ] Cross-exception queue filtering and multiple seeded exceptions; the current search is intentionally local to the seeded demo.
 - [ ] Full browser automation and accessibility audit.
 - [ ] Live Cortex verification in the target environment.
 
