@@ -149,6 +149,22 @@ const workflow: WorkflowStep[] = [
   { id: "validate", label: "Validate", description: "Not started", state: "pending", target: "audit-timeline" },
 ];
 
+const governanceChain = [
+  { label: "CoCo gathers", detail: "sanitized evidence" },
+  { label: "Decision proposes", detail: "cited action" },
+  { label: "Policy decides", detail: "risk + permission" },
+  { label: "Operator approves", detail: "accountability" },
+  { label: "Recovery executes", detail: "fixture boundary" },
+  { label: "Validation closes", detail: "audited result" },
+];
+
+const businessImpact = {
+  summary: "Downstream order reporting is stale until the staging contract is corrected and the run is replayed.",
+  affected: "stg_orders · fct_orders · daily_store_revenue",
+  alternative: "Wait for the upstream contract update",
+  alternativeReason: "Rejected for this incident because it leaves the current reporting window stale without a controlled replay.",
+};
+
 const policy: PolicyPosture = {
   decision: "Approval required",
   risk: "High",
@@ -321,10 +337,16 @@ function App() {
   const runAction = async (path: string, body?: object, key = "ui-schema-drift-recovery") => {
     try {
       const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/${path}`, { method: "POST", headers: { ...API_HEADERS, "Idempotency-Key": key }, body: body ? JSON.stringify(body) : undefined });
-      if (!response.ok) throw new Error("The server rejected this governed action.");
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null;
+        const code = payload?.error?.code;
+        const message = payload?.error?.message ?? "The server rejected this governed action.";
+        throw new Error(code ? `${code}: ${message}` : message);
+      }
       await refresh();
       setNotice(path === "investigate" ? "Investigation completed. Adapter status reflects the actual CoCo or fixture result; recovery remains fixture-only." : "Governed fixture action completed and the incident view was refreshed.");
     } catch (error) {
+      await refresh().catch(() => undefined);
       setNotice(error instanceof Error ? error.message : "Action failed.");
     }
   };
@@ -418,7 +440,20 @@ function App() {
             </div>
           </section>
 
-          <div className="content-grid">
+           <section className="governance-chain panel animate-in delay-1" aria-label="Governed decision boundary">
+             <div className="section-heading"><div><span className="eyebrow">Decision boundary</span><h2>AI proposes. Policy controls.</h2></div><span className="count-badge">No direct production writes</span></div>
+             <div className="governance-chain-list">
+               {governanceChain.map((item, index) => <React.Fragment key={item.label}>
+                 <div className={`governance-node ${index === 2 ? "is-policy" : index === 3 ? "is-approval" : ""}`}>
+                   <strong>{item.label}</strong>
+                   <small>{item.detail}</small>
+                 </div>
+                 {index < governanceChain.length - 1 && <span className="governance-arrow" aria-hidden="true">→</span>}
+               </React.Fragment>)}
+             </div>
+           </section>
+
+           <div className="content-grid">
             <section className="panel evidence-panel animate-in delay-2" id="evidence-workspace">
               <div className="section-heading section-heading-wrap"><div><span className="eyebrow">Investigation context</span><h2>Evidence collected</h2></div><span className="count-badge">{filteredEvidence.length} / {liveEvidence.length}</span></div>
               <div className="filter-row" aria-label="Evidence filters">
@@ -448,16 +483,20 @@ function App() {
                   {loading && <span className="muted-label">Loading live incident state…</span>}
                   {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
                   {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{integration.actionLabel}</button>}
-                  {!loading && liveIncident.status === "Investigated" && <><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." })} type="button">Reject recovery</button></>}
+                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, "ui-schema-drift-preapproval")} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." })} type="button">Reject recovery</button></>}
                   {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
                   {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
                 <div className="preview-note"><span className="signal-dot is-amber" /><span>{integration.notice}</span></div>
               </section>
               <section className="panel recommendation-panel animate-in delay-4">
-                <div className="section-heading"><div><span className="eyebrow">Decision support</span><h2>Root cause signal</h2></div><span className="confidence">High</span></div>
-                <p className="root-cause">Upstream raw orders added <code>order_channel</code>, but the staging projection was not updated before the daily run.</p>
-                <div className="signal-row"><span><Icon name="spark" size={14} />4 supporting sources</span><span><Icon name="file" size={14} />1 cited runbook</span></div>
+                 <div className="section-heading"><div><span className="eyebrow">Decision support</span><h2>Root cause signal</h2></div><span className="confidence">{report?.recommendation?.confidence_band ?? "High"}</span></div>
+                 <p className="root-cause">{report?.recommendation?.cause ?? "Upstream raw orders added order_channel, but the staging projection was not updated before the daily run."}</p>
+                 <div className="signal-row"><span><Icon name="spark" size={14} />{report?.recommendation?.evidence_ids.length ?? 4} supporting sources</span><span><Icon name="file" size={14} />{report?.recommendation?.runbook_ids.length ?? 1} cited runbook</span></div>
+                 <div className="impact-grid">
+                   <div><span className="eyebrow">Business impact</span><p>{businessImpact.summary}</p><small>{businessImpact.affected}</small></div>
+                   <div><span className="eyebrow">Alternative considered</span><p>{businessImpact.alternative}</p><small>{businessImpact.alternativeReason}</small></div>
+                 </div>
               </section>
             </aside>
           </div>
