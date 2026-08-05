@@ -42,6 +42,8 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
 - [Implementation roadmap](docs/TASKS.md)
 - [Hackathon notes](docs/HACKATHON.md)
 - [Demo guide](docs/DEMO.md)
+- [Judge demo script](DEMO_SCRIPT.md)
+- [Hackathon status and acceptance audit](HACKATHON_STATUS.md)
 - [Live Airflow/Cortex verification](docs/LIVE_INTEGRATION.md)
 
 ## Demo Data
@@ -52,7 +54,7 @@ Fixture mode remains the default and does not require credentials. An opt-in CoC
 
 Milestone 6 adds the `/v1` incident lifecycle API and connects the dashboard to persisted fixture-mode state. Milestone 4 provides deterministic runbook retrieval and recommendation validation; Milestone 5 provides policy evaluation, fingerprint-bound approvals, idempotent fixture recovery, and validation-gated transitions. No live integration or recovery write is enabled.
 
-Milestone 7 adds the Admin-only fixture reset, demo readiness status, full lifecycle verification, API replay script, and judge walkthrough. Use `docs/DEMO.md` for the five-minute scenario and recovery instructions.
+Milestone 7 adds the Admin-only fixture reset, demo readiness status, full lifecycle verification, API replay script, and judge walkthrough. Use `DEMO_SCRIPT.md` for the short submission path and `docs/DEMO.md` for the longer recovery instructions.
 
 Milestone 8 adds a read-only Policy view backed by `GET /v1/policies/current`. It exposes the active immutable policy, fixture environment, default-deny behavior, approval requirements, and rule constraints without allowing policy changes.
 

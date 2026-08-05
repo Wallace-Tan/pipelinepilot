@@ -17,7 +17,7 @@ The vision is compelling, but it describes a platform-sized surface area for a s
 | Autonomous recovery for schema drift | Schema changes and rollbacks are high-risk and often deployment-specific | Recommend a controlled recovery; require operator approval; simulate or sandbox the action. |
 | Broad RBAC and policy editor | UI and authorization complexity | Enforce three roles server-side and ship one immutable policy file plus a read-only policy view. |
 | “96% confidence” | Uncalibrated confidence harms trust | Return evidence-backed confidence bands and explanations, never unsupported precise probabilities. |
-| Dashboard, integrations, learning, and multi-pipeline support | Dilutes the end-to-end workflow | Ship one incident detail view and audit timeline; defer external notifications and multi-pipeline operations. |
+| Dashboard, integrations, learning, and multi-pipeline support | Dilutes the end-to-end workflow | Ship a Command Center over one high-priority exception plus a focused Workbench and audit timeline; defer external notifications and multi-pipeline operations. |
 
 ## Problem Statement
 
@@ -37,7 +37,7 @@ Observability tools identify symptoms; generic copilots generate ungrounded sugg
 
 **Vision:** a reliable AI operations teammate that earns trust through evidence, safeguards, and explainability.
 
-**In scope:** one retail ETL schema-drift scenario; incident intake; sanitized context collection; runbook retrieval; CoCo-directed reasoning; policy evaluation; operator approval; recovery invocation; validation; audit trail; RCA display; feedback capture.
+**In scope:** one retail ETL schema-drift scenario; a deterministic Command Center with operational metrics and AI-employee health; an exception queue and focused Workbench; incident intake; sanitized context collection; runbook retrieval; CoCo-directed reasoning; policy evaluation; operator approval; recovery invocation; validation; audit trail; RCA display; feedback capture.
 
 **Out of scope:** production write access, arbitrary SQL, real-time fleet monitoring, a policy authoring UI, Slack/Jira/email, autonomous high-risk remediation, multi-tenant isolation, and claims of ML-calibrated root-cause probabilities.
 

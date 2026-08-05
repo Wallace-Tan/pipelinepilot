@@ -54,6 +54,8 @@ If the backend is stopped, use `scripts/reset-fixture.ps1`, then restart the bac
 
 ## Five-Minute Walkthrough
 
+The judge-facing UI starts on the Command Center. Use `DEMO_SCRIPT.md` for the concise path: open the high-priority exception in Workbench, prove the approval gate, complete fixture recovery and validation, then return to Overview to show the updated metrics. The detailed lifecycle below remains the API and evidence reference.
+
 1. **0:00–0:35 — Detect:** Show the failed `retail_orders_daily` incident, high severity, run identifier, and Fixture mode.
 2. **0:35–0:55 — Policy:** Open the read-only Policy view; show the immutable fixture policy, version, default-deny behavior, and approval-required schema-drift rule.
 3. **0:55–1:35 — Investigate:** Click `Investigate fixture incident`; show monitoring, Airflow log, dbt, and degraded Snowflake metadata evidence.
