@@ -43,7 +43,7 @@ type AuditEntry = {
 
 type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; mode: string; collected_at: string; citations: { title: string; section: string }[] };
-type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
+type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; approvals: { created_at: string; decision: string; reason: string; actor_role: string }[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
 type ApiReport = { recommendation: { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; uncertainty: string } | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
 type ApiPolicyRule = { id: string; action: string; environment: string; minimum_role: string; risk: string; decision: string; required_approver_role: string | null; minimum_severity: string | null; max_retry_count: number | null; reasons: string[] };
 type ApiPolicy = { schema_version: "policy.v1"; id: string; version: string; mode: string; immutable: boolean; rules: ApiPolicyRule[]; default_decision: string };
@@ -63,6 +63,14 @@ async function fetchIncident(): Promise<ApiDetail> {
 
 function mapIncident(value: ApiIncident) {
   return { pipeline: value.pipeline_name, runId: value.run_id, status: value.status.replace(/\b\w/g, (letter) => letter.toUpperCase()), severity: value.severity.replace(/\b\w/g, (letter) => letter.toUpperCase()), detected: new Date(value.detected_at).toLocaleString(), mode: value.mode };
+}
+
+function isCompletedStatus(status: string) {
+  return ["Recovered", "Validated", "Reported"].includes(status);
+}
+
+function statusLabel(status: string) {
+  return status === "Awaiting approval" ? "Awaiting approval" : status;
 }
 
 function mapEvidence(value: ApiEvidence): EvidenceViewModel {
@@ -86,7 +94,9 @@ type IconName =
   | "spark"
   | "terminal";
 
-const incident = {
+type IncidentViewModel = { pipeline: string; runId: string; status: string; severity: string; detected: string; mode: string };
+
+const incident: IncidentViewModel = {
   pipeline: "retail_orders_daily",
   runId: "airflow-run-20260723T040000Z",
   status: "Awaiting approval",
@@ -258,6 +268,72 @@ function PolicyView({ policy, loading, error, onRetry }: { policy: ApiPolicy | n
   );
 }
 
+function CommandCenter({
+  incident,
+  evidenceCount,
+  report,
+  integrationLabel,
+  onOpenWorkbench,
+}: {
+  incident: IncidentViewModel;
+  evidenceCount: number;
+  report: ApiReport | null;
+  integrationLabel: string;
+  onOpenWorkbench: () => void;
+}) {
+  const validated = incident.status === "Validated";
+  const recovered = isCompletedStatus(incident.status);
+  const exceptionState = validated ? "Closed" : incident.status === "Created" ? "Needs investigation" : "Open";
+  const employees = [
+    { name: "Signal Sentinel", role: "Monitoring employee", status: "Healthy", detail: "Watching retail_orders_daily", icon: "activity" as IconName, tone: "emerald" },
+    { name: "Evidence Analyst", role: "Investigation employee", status: incident.status === "Created" ? "Ready" : "Evidence assembled", detail: `${evidenceCount} cited sources`, icon: "spark" as IconName, tone: "blue" },
+    { name: "Policy Guardian", role: "Governance employee", status: validated ? "Closed" : "Approval required", detail: "High-risk recovery is gated", icon: "shield" as IconName, tone: "amber" },
+    { name: "Recovery Operator", role: "Execution employee", status: recovered ? (validated ? "Validated" : "Recovered") : "Standby", detail: "Fixture boundary · no production writes", icon: "terminal" as IconName, tone: recovered ? "emerald" : "neutral" },
+  ];
+
+  return (
+    <div className="command-center animate-in">
+      <section className="command-heading">
+        <div>
+          <span className="eyebrow">Operations workspace</span>
+          <h1>Command Center</h1>
+          <p className="subhead">Governed AI employees keep the recovery decision observable, accountable, and reversible.</p>
+        </div>
+        <div className="command-mode"><span className="status-dot is-emerald" /><span><strong>{integrationLabel}</strong><small>Evidence context · recovery fixture-only</small></span></div>
+      </section>
+
+      <section className="metric-grid" aria-label="Operational metrics">
+        <div className="panel metric-card"><span className="eyebrow">Active exceptions</span><strong>{validated ? 0 : 1}</strong><small>{validated ? "No unresolved exception" : "1 high-priority exception"}</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Freshness posture</span><strong className={validated ? "is-good" : "is-warning"}>{validated ? "Healthy" : "Stale"}</strong><small>daily_store_revenue</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Evidence coverage</span><strong>{evidenceCount}/4</strong><small>{integrationLabel} context sources</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Recovery outcome</span><strong className={validated ? "is-good" : "is-neutral"}>{validated ? "Validated" : report?.execution ? "Executed" : "Pending"}</strong><small>{validated ? "Audit closed" : "Operator decision required"}</small></div>
+      </section>
+
+      <section className="employee-panel panel">
+        <div className="section-heading"><div><span className="eyebrow">AI employees</span><h2>Execution health</h2></div><span className="count-badge">4 workers · deterministic demo</span></div>
+        <div className="employee-grid">
+          {employees.map((employee) => <article className="employee-card" key={employee.name}>
+            <div className={`employee-icon is-${employee.tone}`}><Icon name={employee.icon} size={16} /></div>
+            <div className="employee-copy"><strong>{employee.name}</strong><small>{employee.role}</small><p>{employee.detail}</p></div>
+            <span className={`employee-status is-${employee.tone}`}>{employee.status}</span>
+          </article>)}
+        </div>
+      </section>
+
+      <section className="exception-panel panel" aria-label="Exception queue">
+        <div className="section-heading"><div><span className="eyebrow">Exception queue</span><h2>Attention required</h2></div><span className={`queue-state ${validated ? "is-closed" : "is-open"}`}>{exceptionState}</span></div>
+        <div className="exception-row">
+          <div className="exception-priority"><span className="signal-dot" /><span>High</span></div>
+          <div className="exception-main"><strong>{incident.pipeline}</strong><span>Schema drift blocked the staging projection; downstream order reporting is stale.</span><small>{incident.runId} · {statusLabel(incident.status)} · {businessImpact.affected}</small></div>
+          <button className="secondary-button" onClick={onOpenWorkbench} type="button">{validated ? "Review resolution" : "Open workbench"}<Icon name="arrow" size={14} /></button>
+        </div>
+      </section>
+
+      <div className="decision-boundary-note"><Icon name="shield" size={15} /><span><strong>Governed recovery boundary:</strong> the AI employees can gather evidence and propose a plan; only the Policy Guardian plus an accountable Operator can authorize execution.</span></div>
+    </div>
+  );
+}
+
 function App() {
   const [activeNav, setActiveNav] = useState("Overview");
   const [filter, setFilter] = useState<EvidenceFilter>("all");
@@ -274,6 +350,8 @@ function App() {
   const [feedbackText, setFeedbackText] = useState("");
   const [livePolicyDocument, setLivePolicyDocument] = useState<ApiPolicy | null>(null);
   const [policyError, setPolicyError] = useState<string | null>(null);
+  const [draftAction, setDraftAction] = useState(policy.action);
+  const [editingAction, setEditingAction] = useState(false);
 
   const integration = useMemo(() => {
     const details = demoStatus?.adapter_status;
@@ -308,8 +386,15 @@ function App() {
       }
       setLiveIncident(mapIncident(detail.incident));
       setLiveEvidence(detail.evidence.map(mapEvidence));
-      setLiveAudit(detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" : "neutral" })));
-      if (detail.recommendation) setLivePolicy({ decision: "Approval required", risk: "High", reason: detail.recommendation.uncertainty, action: detail.recommendation.recommended_action });
+      const approvals = detail.approvals ?? [];
+      setLiveAudit([
+        ...detail.audit.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: entry.action, detail: entry.outcome, actor: entry.actor_role, tone: entry.outcome.includes("failed") ? "warning" as const : "neutral" as const })),
+        ...approvals.map((entry) => ({ time: new Date(entry.created_at).toLocaleTimeString(), action: `Operator ${entry.decision}`, detail: entry.reason, actor: entry.actor_role, tone: entry.decision === "approved" ? "success" as const : "warning" as const })),
+      ].sort((left, right) => right.time.localeCompare(left.time)));
+      if (detail.recommendation) {
+        setLivePolicy({ decision: "Approval required", risk: "High", reason: detail.recommendation.uncertainty, action: detail.recommendation.recommended_action });
+        setDraftAction((current) => editingAction ? current : detail.recommendation?.recommended_action ?? current);
+      }
       if (reportData?.policy_decision) setLivePolicy({ decision: reportData.policy_decision.decision.replace("_", " "), risk: reportData.policy_decision.risk, reason: detail.recommendation?.uncertainty ?? "Policy decision loaded from the server.", action: detail.recommendation?.recommended_action ?? "" });
       setApiError(null);
     } catch (error) {
@@ -367,6 +452,19 @@ function App() {
     setNotice(`${step.label}: ${step.description}`);
   };
 
+  const openWorkbench = () => {
+    setActiveNav("Workbench");
+    window.setTimeout(() => document.getElementById("incident-overview")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
+
+  const approveRecovery = () => {
+    const reason = draftAction.trim() === livePolicy.action.trim()
+      ? "Approve fixture recovery."
+      : `Approve edited recovery plan: ${draftAction.trim()}`;
+    void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason }, `ui-schema-drift-approval-${Date.now()}`);
+    setEditingAction(false);
+  };
+
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary navigation">
@@ -379,11 +477,11 @@ function App() {
         </div>
         <div className="rail-label">Workspace</div>
         <nav className="main-nav">
-          {[{ label: "Overview", icon: "grid" as IconName }, { label: "Incidents", icon: "activity" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
-            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { setActiveNav(item.label); if (item.label !== "Policy") setNotice(`${item.label} view is ready for the next API milestone.`); }} type="button">
+          {[{ label: "Overview", icon: "grid" as IconName }, { label: "Workbench", icon: "activity" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
+            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { setActiveNav(item.label); if (item.label === "Workbench") openWorkbench(); else if (item.label !== "Overview" && item.label !== "Policy") setNotice(`${item.label} view is not part of this judge-ready vertical slice.`); }} type="button">
               <Icon name={item.icon} />
               <span>{item.label}</span>
-              {item.label === "Incidents" && <span className="nav-count">1</span>}
+              {item.label === "Workbench" && <span className="nav-count">1</span>}
             </button>
           ))}
         </nav>
@@ -412,10 +510,10 @@ function App() {
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
           {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {integration.label} · {integration.detail} · recovery fixture-only</div>}
-          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : <>
+          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
-              <div className="eyebrow-row"><span className="eyebrow">Active incident</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} severity</span></div>
+              <div className="eyebrow-row"><span className="eyebrow">Exception Workbench</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} priority</span></div>
               <h1>{liveIncident.pipeline}</h1>
               <p className="subhead">Daily retail orders load failed after an upstream schema change.</p>
               <div className="incident-meta"><span><Icon name="terminal" size={14} />{liveIncident.runId}</span><span><Icon name="database" size={14} />Detected {liveIncident.detected}</span></div>
@@ -476,14 +574,14 @@ function App() {
               <section className="panel decision-panel animate-in delay-3" id="decision-panel">
                 <div className="section-heading"><div><span className="eyebrow">Governance gate</span><h2>Policy posture</h2></div><Icon name="lock" size={18} /></div>
                 <div className="policy-decision"><div><span className="eyebrow">Decision</span><strong>{livePolicy.decision}</strong></div><span className="badge badge-warning">{livePolicy.risk} risk</span></div>
-                <div className="policy-action"><span className="eyebrow">Proposed action</span><p>{livePolicy.action}</p></div>
+                <div className="policy-action"><div className="section-heading"><span className="eyebrow">Proposed action</span><button className="text-action action-edit" onClick={() => setEditingAction((current) => !current)} type="button">{editingAction ? "Close editor" : "Edit proposal"}</button></div>{editingAction ? <><textarea aria-label="Edit proposed action" className="action-editor" onChange={(event) => setDraftAction(event.target.value)} value={draftAction} /><small className="editor-note">Edit the operator-facing recovery plan. The canonical policy action remains <code>schema_drift_recovery</code>.</small><button className="text-action" onClick={() => { setEditingAction(false); setNotice("Edited recovery plan will be captured in the approval justification."); }} type="button">Save proposed action <Icon name="arrow" size={14} /></button></> : <p>{draftAction}</p>}</div>
                 <p className="policy-reason">{livePolicy.reason}</p>
                 <button className="secondary-button" onClick={() => setNotice(livePolicy.reason)} type="button"><Icon name="shield" size={15} />Explain policy gate</button>
                 <div className="fixture-actions">
                   {loading && <span className="muted-label">Loading live incident state…</span>}
                   {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
                   {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{integration.actionLabel}</button>}
-                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, "ui-schema-drift-preapproval")} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason: "Approve fixture recovery." })} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." })} type="button">Reject recovery</button></>}
+                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, "ui-schema-drift-preapproval")} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" onClick={approveRecovery} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." }, `ui-schema-drift-rejection-${Date.now()}`)} type="button">Reject recovery</button></>}
                   {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
                   {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
