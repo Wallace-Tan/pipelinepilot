@@ -44,3 +44,46 @@ def test_audit_index_is_admin_only_and_filterable(tmp_path, monkeypatch) -> None
     assert denied.status_code == 403
     assert allowed.status_code == 200
     assert all(item["action"] == "incident.created" for item in allowed.json()["items"])
+
+
+def test_incident_queue_is_seeded_and_filterable(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("PIPELINEPILOT_DATABASE_PATH", str(tmp_path / "incident-queue.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    viewer = {"X-Actor-Id": "viewer-queue", "X-Actor-Role": "viewer"}
+
+    response = client.get("/v1/incidents", headers=viewer, params={"severity": "critical"})
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["items"][0]["id"] == "inc-warehouse-permission-20260723"
+
+
+def test_agent_and_execution_detail_resources_are_typed(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("PIPELINEPILOT_DATABASE_PATH", str(tmp_path / "detail-resources.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    operator = {"X-Actor-Id": "operator-detail", "X-Actor-Role": "operator"}
+    viewer = {"X-Actor-Id": "viewer-detail", "X-Actor-Role": "viewer"}
+    incident_id = "inc-retail-orders-20260723"
+
+    assert client.post(f"/v1/incidents/{incident_id}/investigate", headers=operator).status_code == 200
+    agent = client.get(f"/v1/incidents/{incident_id}/agent", headers=viewer)
+    assert agent.status_code == 200
+    assert agent.json()["recommendation"]["schema_version"] == "recommendation.v2"
+    assert agent.json()["adapter_status"]
+
+    key = "detail-resource-execution"
+    action = {"action": "schema_drift_recovery"}
+    headers = {**operator, "Idempotency-Key": key}
+    assert client.post(f"/v1/incidents/{incident_id}/approvals", headers=headers, json=action).status_code == 200
+    execution_response = client.post(f"/v1/incidents/{incident_id}/executions", headers=headers, json=action)
+    assert execution_response.status_code == 200
+    execution_id = execution_response.json()["execution"]["id"]
+    assert client.post(f"/v1/incidents/{incident_id}/validate", headers=operator).status_code == 200
+
+    execution = client.get(f"/v1/incidents/{incident_id}/executions/{execution_id}", headers=viewer)
+    assert execution.status_code == 200
+    assert execution.json()["execution"]["status"] == "succeeded"
+    assert execution.json()["approval"]["decision"] == "approved"
+    assert execution.json()["validation"]["status"] == "passed"

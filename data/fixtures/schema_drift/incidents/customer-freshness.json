@@ -1,0 +1,12 @@
+{
+  "schema_version": "incident.v1",
+  "id": "inc-customer-freshness-20260723",
+  "pipeline_name": "customer_freshness_hourly",
+  "run_id": "airflow-run-20260723T033000Z",
+  "mode": "fixture",
+  "status": "reported",
+  "severity": "medium",
+  "summary": "Customer dimension freshness missed its hourly SLA after an upstream delivery delay.",
+  "detected_at": "2026-07-23T03:42:00Z",
+  "evidence_ids": []
+}

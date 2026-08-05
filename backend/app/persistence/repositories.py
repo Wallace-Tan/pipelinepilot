@@ -330,3 +330,7 @@ class ValidationRepository:
     def get_for_incident(self, incident_id: str) -> ValidationResult | None:
         row = self.connection.execute("SELECT document_json FROM validation_results WHERE incident_id = ? ORDER BY created_at DESC LIMIT 1", (incident_id,)).fetchone()
         return ValidationResult.model_validate(__import__("json").loads(row["document_json"])) if row else None
+
+    def get_for_execution(self, execution_id: str) -> ValidationResult | None:
+        row = self.connection.execute("SELECT document_json FROM validation_results WHERE execution_id = ? ORDER BY created_at DESC LIMIT 1", (execution_id,)).fetchone()
+        return ValidationResult.model_validate(__import__("json").loads(row["document_json"])) if row else None

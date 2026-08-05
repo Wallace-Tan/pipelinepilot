@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.contracts import (
-    AdapterStatus, Approval, ActorRole, Evidence, Incident, PolicyDecision, PolicyDocument,
+    AdapterStatus, Approval, ActorRole, AuditEvent, Evidence, Incident, PolicyDecision, PolicyDocument,
     Recommendation, RecoveryExecution, ValidationResult,
 )
 
@@ -58,6 +58,26 @@ class IncidentDetailResponse(BaseModel):
     executions: list[RecoveryExecution]
     approvals: list[Any]
     audit: list[Any]
+
+
+class AgentDetailResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    incident: Incident
+    evidence: list[Evidence]
+    recommendation: Recommendation | None
+    policy_decision: PolicyDecision | None
+    adapter_status: dict[str, AdapterStatus]
+    audit: list[AuditEvent]
+
+
+class ExecutionDetailResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    incident: Incident
+    execution: RecoveryExecution
+    approval: Approval | None
+    policy_decision: PolicyDecision | None
+    validation: ValidationResult | None
+    audit: list[AuditEvent]
 
 
 class IncidentCreateResponse(BaseModel):

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -20,6 +22,7 @@ def create_app() -> FastAPI:
     database = Database(settings.database_path)
     connection = database.connect()
     app.state.resources = AppResources(settings=settings, database=database, connection=connection)
+    app.state.request_lock = asyncio.Lock()
     app.state.adapter_status = initial_adapter_status(settings.coco_enabled)
     FixtureSeedService(PROJECT_ROOT).seed(connection)
     app.include_router(health_router)
@@ -28,7 +31,10 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def correlation_header(request: Request, call_next):
-        response = await call_next(request)
+        # SQLite uses one shared connection for the local demo. Serialize request
+        # handlers so parallel dashboard hydration cannot interleave cursor work.
+        async with app.state.request_lock:
+            response = await call_next(request)
         response.headers.setdefault("X-Correlation-ID", getattr(request.state, "correlation_id", request.headers.get("X-Correlation-ID", f"corr-api-{uuid4().hex}")))
         return response
 

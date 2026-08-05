@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from app.api.dependencies import correlation_id, idempotency_key, remember_idempotent, replay_idempotent, require_admin, require_operator, require_viewer, resources
 from app.api.schemas import (
     ActionRequest, ApprovalResponse, ExecutionResponse, FeedbackRequest, FeedbackResponse,
-    IncidentCreateRequest, IncidentCreateResponse, IncidentDetailResponse, IncidentListResponse,
+    AgentDetailResponse, ExecutionDetailResponse, IncidentCreateRequest, IncidentCreateResponse, IncidentDetailResponse, IncidentListResponse,
     InvestigationResponse, PolicyResponse, ReportResponse, ValidationResponse,
 )
 from app.config.paths import FIXTURE_ROOT, POLICY_PATH, PROJECT_ROOT, RECOMMENDATION_PATH, RUNBOOKS_ROOT
@@ -25,7 +25,7 @@ from app.policy.engine import PolicyEngine
 from app.security.identity import RequestIdentity
 from app.security.redaction import RedactionService
 from app.services.errors import GovernanceError
-from app.services.adapter_status import investigation_adapter_status
+from app.services.adapter_status import initial_adapter_status, investigation_adapter_status
 from app.services.governance import ApprovalService, build_execution_proposal
 from app.services.investigation import InvestigationService
 from app.services.recovery import RecoveryService, ValidationService
@@ -120,6 +120,43 @@ def get_incident(request: Request, incident_id: str, identity: RequestIdentity =
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
     decision = PolicyEngine.from_path(POLICY_PATH).evaluate(incident, "schema_drift_recovery", ActorRole.OPERATOR)
     return IncidentDetailResponse(incident=incident, evidence=evidence_repo.list_for_incident(incident_id), recommendation=recommendation_repo.get_for_incident(incident_id), policy_decision=decision, executions=execution_repo.list_for_incident(incident_id), approvals=approval_repo.list_for_incident(incident_id), audit=audit_repo.list(incident_id=incident_id))
+
+
+@router.get("/incidents/{incident_id}/agent", response_model=AgentDetailResponse)
+def get_agent_detail(request: Request, incident_id: str, identity: RequestIdentity = Depends(require_viewer)) -> AgentDetailResponse:
+    incident_repo, evidence_repo, _, _, audit_repo, _, recommendation_repo, _, _ = repos(request)
+    incident = incident_repo.get(incident_id)
+    if incident is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
+    decision = PolicyEngine.from_path(POLICY_PATH).evaluate(incident, "schema_drift_recovery", ActorRole.OPERATOR)
+    return AgentDetailResponse(
+        incident=incident,
+        evidence=evidence_repo.list_for_incident(incident_id),
+        recommendation=recommendation_repo.get_for_incident(incident_id),
+        policy_decision=decision,
+        adapter_status=getattr(request.app.state, "adapter_status", initial_adapter_status(resources(request).settings.coco_enabled)),
+        audit=audit_repo.list(incident_id=incident_id),
+    )
+
+
+@router.get("/incidents/{incident_id}/executions/{execution_id}", response_model=ExecutionDetailResponse)
+def get_execution_detail(request: Request, incident_id: str, execution_id: str, identity: RequestIdentity = Depends(require_viewer)) -> ExecutionDetailResponse:
+    incident_repo, _, execution_repo, approval_repo, audit_repo, _, _, _, validation_repo = repos(request)
+    incident = incident_repo.get(incident_id)
+    execution = execution_repo.get(execution_id)
+    if incident is None or execution is None or execution.incident_id != incident_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Execution not found."})
+    decision = PolicyEngine.from_path(POLICY_PATH).evaluate(incident, execution.action, ActorRole.OPERATOR)
+    return ExecutionDetailResponse(
+        incident=incident,
+        execution=execution,
+        approval=approval_repo.get(execution.approval_id) if execution.approval_id else None,
+        policy_decision=decision,
+        validation=validation_repo.get_for_execution(execution_id),
+        audit=audit_repo.list(execution_id=execution_id),
+    )
 
 
 @router.post("/incidents/{incident_id}/investigate", response_model=InvestigationResponse)
