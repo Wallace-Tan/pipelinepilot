@@ -61,7 +61,11 @@ class RecoveryService:
         if execution.status in (
             RecoveryExecutionStatus.SUCCEEDED,
             RecoveryExecutionStatus.FAILED,
-            RecoveryExecutionStatus.BLOCKED,
+        ):
+            return execution
+        if execution.status is RecoveryExecutionStatus.BLOCKED and not (
+            policy_decision.decision is PolicyDecisionType.APPROVAL_REQUIRED
+            and execution.approval_id is not None
         ):
             return execution
         if policy_decision.decision is PolicyDecisionType.DENY:

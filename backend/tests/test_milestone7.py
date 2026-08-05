@@ -85,6 +85,36 @@ def test_missing_approval_is_blocked_and_reset_is_repeatable(api_client) -> None
     assert client.post("/v1/demo/reset", headers=ADMIN).status_code == 200
 
 
+def test_preapproval_block_can_resume_after_matching_approval(api_client) -> None:
+    client = api_client
+    investigate(client)
+    key = "m7-preapproval-resume-001"
+    headers = {**OPERATOR, "Idempotency-Key": key}
+
+    blocked = client.post(
+        f"/v1/incidents/{INCIDENT}/executions",
+        headers=headers,
+        json={"action": "schema_drift_recovery"},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["error"]["code"] == "approval_required"
+
+    approval = client.post(
+        f"/v1/incidents/{INCIDENT}/approvals",
+        headers=headers,
+        json={"action": "schema_drift_recovery", "reason": "Approve fixture recovery."},
+    )
+    assert approval.status_code == 200
+
+    execution = client.post(
+        f"/v1/incidents/{INCIDENT}/executions",
+        headers=headers,
+        json={"action": "schema_drift_recovery"},
+    )
+    assert execution.status_code == 200
+    assert execution.json()["execution"]["status"] == "succeeded"
+
+
 def test_validation_before_recovery_returns_safe_not_found_error(api_client) -> None:
     investigate(api_client)
 

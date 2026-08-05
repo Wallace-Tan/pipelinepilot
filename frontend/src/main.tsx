@@ -543,6 +543,7 @@ function App() {
   const [livePolicyDocument, setLivePolicyDocument] = useState<ApiPolicy | null>(null);
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [draftAction, setDraftAction] = useState(policy.action);
+  const recoveryProposalKey = "ui-schema-drift-recovery";
   const [editingAction, setEditingAction] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -674,7 +675,7 @@ function App() {
     const reason = draftAction.trim() === livePolicy.action.trim()
       ? "Approve fixture recovery."
       : `Approve edited recovery plan: ${draftAction.trim()}`;
-    void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason }, `ui-schema-drift-approval-${Date.now()}`);
+    void runAction("approvals", { action: "schema_drift_recovery", approved: true, reason }, recoveryProposalKey);
     setEditingAction(false);
   };
 
@@ -801,7 +802,7 @@ function App() {
                   {loading && <span className="muted-label">Loading live incident state…</span>}
                   {apiError && <button className="secondary-button" onClick={() => void refresh()} type="button">Retry API connection</button>}
                   {!loading && liveIncident.status === "Created" && <button className="secondary-button" onClick={() => void runAction("investigate")} type="button">{integration.actionLabel}</button>}
-                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, "ui-schema-drift-preapproval")} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" onClick={approveRecovery} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." }, `ui-schema-drift-rejection-${Date.now()}`)} type="button">Reject recovery</button></>}
+                   {!loading && ["Investigated", "Awaiting Approval"].includes(liveIncident.status) && <><button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" }, recoveryProposalKey)} type="button"><Icon name="lock" size={15} />Try execution — show approval gate</button><button className="secondary-button" onClick={approveRecovery} type="button">Approve fixture recovery</button><button className="secondary-button" onClick={() => void runAction("approvals", { action: "schema_drift_recovery", approved: false, reason: "Reject fixture recovery." }, `ui-schema-drift-rejection-${Date.now()}`)} type="button">Reject recovery</button></>}
                   {!loading && liveIncident.status === "Approved" && <button className="secondary-button" onClick={() => void runAction("executions", { action: "schema_drift_recovery" })} type="button">Execute fixture recovery</button>}
                   {!loading && liveIncident.status === "Recovered" && <button className="secondary-button" onClick={() => void runAction("validate")} type="button">Validate recovery</button>}
                 </div>
