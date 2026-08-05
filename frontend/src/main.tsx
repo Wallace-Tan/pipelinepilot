@@ -299,6 +299,55 @@ const policy: PolicyPosture = {
   action: "Update staging projection and rerun downstream order models",
 };
 
+type ConstellationSource = {
+  id: "airflow" | "dbt" | "snowflake" | "monitoring";
+  label: string;
+  role: string;
+  summary: string;
+  citation: string;
+  accent: "blue" | "lavender" | "amber" | "emerald";
+  icon: IconName;
+};
+
+const constellationSources: ConstellationSource[] = [
+  {
+    id: "airflow",
+    label: "Airflow",
+    role: "Failure signature",
+    summary: "ColumnNotFound: order_channel during staging compilation.",
+    citation: "runbook-schema-drift · Validate downstream model contracts",
+    accent: "blue",
+    icon: "terminal",
+  },
+  {
+    id: "dbt",
+    label: "dbt",
+    role: "Freshness impact",
+    summary: "stg_orders failed and downstream freshness is stale.",
+    citation: "runbook-schema-drift · Validate downstream model contracts",
+    accent: "lavender",
+    icon: "layers",
+  },
+  {
+    id: "snowflake",
+    label: "Snowflake",
+    role: "Metadata context",
+    summary: "Read-only metadata confirms order_channel is new.",
+    citation: "runbook-schema-drift · Compare source metadata with staging projections",
+    accent: "amber",
+    icon: "database",
+  },
+  {
+    id: "monitoring",
+    label: "Monitoring",
+    role: "Incident signal",
+    summary: "Pipeline failed in transform_orders with no retry running.",
+    citation: "retail_orders_daily · airflow-run-20260723T040000Z",
+    accent: "emerald",
+    icon: "activity",
+  },
+];
+
 const audit: AuditEntry[] = [
   { time: "09:22:14", action: "Investigation completed", detail: "4 evidence sources collected · 1 degraded", actor: "system", tone: "success" },
   { time: "09:21:45", action: "dbt context attached", detail: "stg_orders failed · freshness stale", actor: "dbt health", tone: "neutral" },
@@ -602,7 +651,113 @@ function AuditLogView({ entries, onOpenWorkbench, onNotice }: { entries: AuditEn
   );
 }
 
-function App() {
+function LandingPage({ onOpenSystem }: { onOpenSystem: () => void }) {
+  const [selectedSource, setSelectedSource] = useState<ConstellationSource["id"]>("monitoring");
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const selected = constellationSources.find((source) => source.id === selectedSource) ?? constellationSources[0];
+  const constellationStyle = {
+    "--constellation-rotate-x": `${tilt.x}deg`,
+    "--constellation-rotate-y": `${tilt.y}deg`,
+  } as React.CSSProperties;
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setTilt({
+      x: ((event.clientY - bounds.top) / bounds.height - 0.5) * -5,
+      y: ((event.clientX - bounds.left) / bounds.width - 0.5) * 7,
+    });
+  };
+
+  const resetTilt = () => setTilt({ x: 0, y: 0 });
+
+  return (
+    <main className="landing-page">
+      <header className="landing-header">
+        <a className="landing-brand" href="/" aria-label="PipelinePilot home">
+          <span className="brand-mark"><BrandMark /></span>
+          <span><strong>PipelinePilot</strong><small>Incident command</small></span>
+        </a>
+        <div className="landing-header-actions">
+          <span className="landing-status"><span className="status-dot is-emerald" />Fixture demo · read-only context</span>
+          <button className="landing-nav-button" onClick={onOpenSystem} type="button">Open Command Center <Icon name="arrow" size={14} /></button>
+        </div>
+      </header>
+
+      <section className="landing-hero" aria-labelledby="landing-title">
+        <div className="landing-hero-copy">
+          <span className="eyebrow landing-eyebrow">Governed incident response</span>
+          <h1 id="landing-title">When pipelines fail, decisions should be explainable.</h1>
+          <p className="landing-subhead">PipelinePilot connects signal, evidence, policy, approval, and recovery in one accountable control plane for data operations.</p>
+          <div className="landing-actions">
+            <button className="landing-primary-button" onClick={onOpenSystem} type="button">Open Command Center <Icon name="arrow" size={16} /></button>
+            <a className="landing-secondary-link" href="#evidence-loop">Explore the evidence loop <Icon name="chevron" size={14} /></a>
+          </div>
+          <div className="landing-trust-row"><span><Icon name="shield" size={14} />Policy before recovery</span><span><Icon name="lock" size={14} />No direct production writes</span></div>
+        </div>
+
+        <div className="constellation-wrap" onPointerLeave={resetTilt} onPointerMove={handlePointerMove}>
+          <div className="constellation-scene" style={constellationStyle}>
+            <div className="constellation-orbit constellation-orbit-one" aria-hidden="true" />
+            <div className="constellation-orbit constellation-orbit-two" aria-hidden="true" />
+            <svg className="constellation-lines" aria-hidden="true" viewBox="0 0 100 100">
+              {constellationSources.map((source, index) => <line className={`constellation-line line-${source.id} ${selectedSource === source.id ? "is-active" : ""}`} key={source.id} x1="50" y1="50" x2={index === 0 ? "50" : index === 1 ? "89" : index === 2 ? "50" : "11"} y2={index === 0 ? "9" : index === 1 ? "50" : index === 2 ? "91" : "50"} />)}
+            </svg>
+            <div className="constellation-core" aria-label="Central incident: retail_orders_daily schema drift">
+              <span className="constellation-core-pulse" aria-hidden="true" />
+              <span className="eyebrow">Central incident</span>
+              <strong>retail_orders_daily</strong>
+              <small>schema drift · high priority</small>
+              <span className="constellation-core-status"><span className="signal-dot" />Awaiting approval</span>
+            </div>
+            {constellationSources.map((source) => (
+              <button
+                aria-pressed={selectedSource === source.id}
+                className={`constellation-node node-${source.id} is-${source.accent} ${selectedSource === source.id ? "is-selected" : ""}`}
+                key={source.id}
+                onClick={() => setSelectedSource(source.id)}
+                type="button"
+              >
+                <span className="constellation-node-icon"><Icon name={source.icon} size={15} /></span>
+                <span><strong>{source.label}</strong><small>{source.role}</small></span>
+              </button>
+            ))}
+          </div>
+          <div className="constellation-caption" aria-live="polite">
+            <div className="constellation-caption-heading"><span className={`source-icon source-${selected.id}`}><Icon name={selected.icon} size={15} /></span><span><span className="eyebrow">Selected evidence path</span><strong>{selected.label} · {selected.role}</strong></span></div>
+            <p>{selected.summary}</p>
+            <small><Icon name="file" size={12} />{selected.citation}</small>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-proof" aria-label="PipelinePilot proof points">
+        <div><strong>4</strong><span>evidence sources converge</span></div>
+        <div><strong>1</strong><span>policy gate before recovery</span></div>
+        <div><strong>0</strong><span>direct production writes</span></div>
+        <div><strong>100%</strong><span>audit trail for the demo path</span></div>
+      </section>
+
+      <section className="landing-loop" id="evidence-loop" aria-labelledby="evidence-loop-title">
+        <div className="landing-section-intro"><span className="eyebrow">From signal to resolution</span><h2 id="evidence-loop-title">Every recommendation carries its evidence trail.</h2><p>CoCo can assemble context, but typed evidence, deterministic policy, and an accountable operator control what happens next.</p></div>
+        <div className="landing-loop-grid">
+          <article><span className="landing-step-number">01</span><strong>Gather context</strong><p>Monitoring, Airflow, dbt, and Snowflake evidence are collected with source and citation metadata.</p></article>
+          <article><span className="landing-step-number">02</span><strong>Apply policy</strong><p>The server evaluates risk and permission before any recovery action can proceed.</p></article>
+          <article><span className="landing-step-number">03</span><strong>Keep operators in control</strong><p>Approval, recovery, validation, and audit remain visible and reversible.</p></article>
+        </div>
+      </section>
+
+      <section className="landing-final-cta" aria-labelledby="landing-final-title">
+        <div><span className="eyebrow">Ready when you are</span><h2 id="landing-final-title">Open the incident command center.</h2><p>Explore the seeded schema-drift workflow with fixture recovery clearly labeled at every boundary.</p></div>
+        <button className="landing-primary-button" onClick={onOpenSystem} type="button">Enter PipelinePilot <Icon name="arrow" size={16} /></button>
+      </section>
+
+      <footer className="landing-footer"><span><span className="signal-dot is-emerald" />PipelinePilot · governed by policy</span><span>Sanitized demo · recovery fixture-only</span></footer>
+    </main>
+  );
+}
+
+function SystemApp() {
   const [activeNav, setActiveNav] = useState("Overview");
   const [filter, setFilter] = useState<EvidenceFilter>("all");
   const [expandedEvidence, setExpandedEvidence] = useState<string | null>(null);
@@ -973,4 +1128,28 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);
+type AppRoute = "landing" | "system";
+
+function AppRouter() {
+  const routeForPath = () => window.location.pathname === "/app" ? "system" as const : "landing" as const;
+  const [route, setRoute] = useState<AppRoute>(routeForPath);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(routeForPath());
+      window.scrollTo({ top: 0, behavior: "auto" });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const openSystem = () => {
+    if (window.location.pathname !== "/app") window.history.pushState({}, "", "/app");
+    setRoute("system");
+    window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  return route === "system" ? <SystemApp /> : <LandingPage onOpenSystem={openSystem} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppRouter /></React.StrictMode>);
