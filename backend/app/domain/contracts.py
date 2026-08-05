@@ -125,8 +125,13 @@ class AdapterStatus(StrictContract):
     reason: str | None = Field(default=None, max_length=500)
 
 
+class RecommendationAlternative(StrictContract):
+    action: str = Field(min_length=1, max_length=240)
+    reason: str = Field(min_length=1, max_length=500)
+
+
 class Recommendation(StrictContract):
-    schema_version: Literal["recommendation.v1"]
+    schema_version: Literal["recommendation.v2"]
     id: SafeId
     incident_id: SafeId
     cause: str = Field(min_length=1, max_length=500)
@@ -134,6 +139,8 @@ class Recommendation(StrictContract):
     evidence_ids: list[SafeId] = Field(min_length=1)
     runbook_ids: list[SafeId] = Field(min_length=1)
     recommended_action: str = Field(min_length=1, max_length=240)
+    impact: str = Field(min_length=1, max_length=700)
+    alternatives: list[RecommendationAlternative] = Field(min_length=1, max_length=3)
     uncertainty: str = Field(min_length=1, max_length=500)
     mode: RuntimeMode
 

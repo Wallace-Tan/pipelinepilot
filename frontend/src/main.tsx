@@ -53,8 +53,10 @@ type RunbookEntry = {
 
 type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; mode: string; collected_at: string; citations: { title: string; section: string }[] };
-type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: { cause: string; confidence_band: string; recommended_action: string; uncertainty: string } | null; approvals: { created_at: string; decision: string; reason: string; actor_role: string }[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
-type ApiReport = { recommendation: { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; uncertainty: string } | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
+type ApiRecommendation = { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; impact: string; alternatives: { action: string; reason: string }[]; uncertainty: string };
+type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: ApiRecommendation | null; approvals: { created_at: string; decision: string; reason: string; actor_role: string }[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
+type ApiAuditEvent = { id: string; incident_id: string | null; execution_id: string | null; actor_role: string; action: string; outcome: string; created_at: string };
+type ApiReport = { recommendation: ApiRecommendation | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
 type ApiPolicyRule = { id: string; action: string; environment: string; minimum_role: string; risk: string; decision: string; required_approver_role: string | null; minimum_severity: string | null; max_retry_count: number | null; reasons: string[] };
 type ApiPolicy = { schema_version: "policy.v1"; id: string; version: string; mode: string; immutable: boolean; rules: ApiPolicyRule[]; default_decision: string };
 type ApiPolicyResponse = { policy: ApiPolicy };
@@ -86,6 +88,17 @@ function statusLabel(status: string) {
 function mapEvidence(value: ApiEvidence): EvidenceViewModel {
   const sourceLabel = value.source.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
   return { id: value.id, source: value.source, sourceLabel, status: value.mode === "live" || value.source !== "snowflake_metadata" ? "available" : "degraded", summary: value.summary, detail: value.summary, timestamp: new Date(value.collected_at).toLocaleTimeString(), metadata: `${value.evidence_type} · ${value.mode}`, citation: value.citations[0] ? `${value.citations[0].title} · ${value.citations[0].section}` : undefined };
+}
+
+function mapAuditEvent(value: ApiAuditEvent): AuditEntry {
+  const warning = value.outcome.includes("failed") || value.outcome.includes("blocked") || value.outcome.includes("denied");
+  return {
+    time: new Date(value.created_at).toLocaleTimeString(),
+    action: value.action,
+    detail: `${value.outcome}${value.incident_id ? ` · ${value.incident_id}` : ""}${value.execution_id ? ` · ${value.execution_id}` : ""}`,
+    actor: value.actor_role,
+    tone: warning ? "warning" : value.outcome.includes("validated") || value.outcome.includes("completed") ? "success" : "neutral",
+  };
 }
 
 type IconName =
@@ -421,9 +434,27 @@ function RunbooksView({ onOpenWorkbench, onNotice }: { onOpenWorkbench: () => vo
   );
 }
 
-function AuditLogView({ entries, onOpenWorkbench }: { entries: AuditEntry[]; onOpenWorkbench: () => void }) {
+function AuditLogView({ entries, onOpenWorkbench, onNotice }: { entries: AuditEntry[]; onOpenWorkbench: () => void; onNotice: (message: string) => void }) {
   const [query, setQuery] = useState("");
-  const filtered = entries.filter((entry) => `${entry.action} ${entry.detail} ${entry.actor}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const [adminEntries, setAdminEntries] = useState<AuditEntry[] | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const visibleEntries = adminEntries ?? entries;
+  const filtered = visibleEntries.filter((entry) => `${entry.action} ${entry.detail} ${entry.actor}`.toLowerCase().includes(query.trim().toLowerCase()));
+
+  const loadAdminAudit = async () => {
+    setAdminLoading(true);
+    try {
+      const response = await fetch("/v1/audit-logs", { headers: API_ADMIN_HEADERS });
+      if (!response.ok) throw new Error(response.status === 403 ? "Admin authorization is required for the cross-incident audit index." : "The audit index is unavailable.");
+      const payload = await response.json() as { items: ApiAuditEvent[] };
+      setAdminEntries(payload.items.map(mapAuditEvent));
+      onNotice("Admin audit index loaded. Cross-incident filtering remains read-only.");
+    } catch (error) {
+      onNotice(error instanceof Error ? error.message : "The audit index is unavailable.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
 
   return (
     <div className="audit-view animate-in">
@@ -437,20 +468,21 @@ function AuditLogView({ entries, onOpenWorkbench }: { entries: AuditEntry[]; onO
       </section>
 
       <section className="audit-summary-grid" aria-label="Audit summary">
-        <div className="panel metric-card"><span className="eyebrow">Events shown</span><strong>{filtered.length}</strong><small>{entries.length} incident events loaded</small></div>
-        <div className="panel metric-card"><span className="eyebrow">Actors</span><strong>{new Set(entries.map((entry) => entry.actor)).size}</strong><small>System and demo integrations</small></div>
-        <div className="panel metric-card"><span className="eyebrow">Scope</span><strong>1</strong><small>Seeded incident</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Events shown</span><strong>{filtered.length}</strong><small>{visibleEntries.length} events loaded</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Actors</span><strong>{new Set(visibleEntries.map((entry) => entry.actor)).size}</strong><small>System and demo integrations</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Scope</span><strong>{adminEntries ? "All" : "1"}</strong><small>{adminEntries ? "Admin audit index" : "Seeded incident"}</small></div>
         <div className="panel metric-card"><span className="eyebrow">Recovery writes</span><strong>0</strong><small>Fixture boundary only</small></div>
       </section>
 
       <section className="panel audit-full-panel">
-        <div className="section-heading"><div><span className="eyebrow">Event stream</span><h2>retail_orders_daily</h2></div><button className="text-action" onClick={onOpenWorkbench} type="button">Back to workbench <Icon name="arrow" size={14} /></button></div>
+        <div className="section-heading"><div><span className="eyebrow">{adminEntries ? "Admin event index" : "Event stream"}</span><h2>{adminEntries ? "All governed events" : "retail_orders_daily"}</h2></div><button className="text-action" onClick={onOpenWorkbench} type="button">Back to workbench <Icon name="arrow" size={14} /></button></div>
         <label className="search-field audit-search"><Icon name="search" size={15} /><span className="sr-only">Filter audit events</span><input aria-label="Filter audit events" onChange={(event) => setQuery(event.target.value)} placeholder="Filter by action or actor" value={query} /></label>
+        <div className="audit-toolbar"><span className="muted-label">{adminEntries ? "Admin demo identity · cross-incident scope" : "Current incident scope"}</span><button className="secondary-button" disabled={adminLoading} onClick={() => void loadAdminAudit()} type="button">{adminLoading ? "Loading audit index..." : "Load admin audit index"}</button></div>
         <div className="audit-list audit-list-full">{filtered.map((entry) => <div className="audit-entry" key={`${entry.time}-${entry.action}`}><span className={`audit-marker is-${entry.tone}`} /><time>{entry.time}</time><div><strong>{entry.action}</strong><span>{entry.detail}</span></div><small>{entry.actor}</small></div>)}</div>
         {filtered.length === 0 && <p className="empty-state">No audit events match this filter.</p>}
       </section>
 
-      <div className="readiness-note"><Icon name="shield" size={15} /><span><strong>Submission boundary:</strong> the demo proves event ordering and actor attribution for one seeded incident. Cross-incident retention, export, advanced filtering, and production identity federation are not ready and are intentionally not implied.</span></div>
+      <div className="readiness-note"><Icon name="shield" size={15} /><span><strong>Submission boundary:</strong> incident events are available to the demo identity; the optional cross-incident index requires Admin authorization. Retention, export, and production identity federation remain deferred.</span></div>
     </div>
   );
 }
@@ -656,7 +688,7 @@ function App() {
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
           {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {integration.label} · {integration.detail} · recovery fixture-only</div>}
-          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} /> : activeNav === "Runbooks" ? <RunbooksView onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : activeNav === "Audit log" ? <AuditLogView entries={liveAudit} onOpenWorkbench={openWorkbench} /> : <>
+          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} /> : activeNav === "Runbooks" ? <RunbooksView onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : activeNav === "Audit log" ? <AuditLogView entries={liveAudit} onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
               <div className="eyebrow-row"><span className="eyebrow">Exception Workbench</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} priority</span></div>
@@ -738,8 +770,8 @@ function App() {
                  <p className="root-cause">{report?.recommendation?.cause ?? "Upstream raw orders added order_channel, but the staging projection was not updated before the daily run."}</p>
                  <div className="signal-row"><span><Icon name="spark" size={14} />{report?.recommendation?.evidence_ids.length ?? 4} supporting sources</span><span><Icon name="file" size={14} />{report?.recommendation?.runbook_ids.length ?? 1} cited runbook</span></div>
                  <div className="impact-grid">
-                   <div><span className="eyebrow">Business impact</span><p>{businessImpact.summary}</p><small>{businessImpact.affected}</small></div>
-                   <div><span className="eyebrow">Alternative considered</span><p>{businessImpact.alternative}</p><small>{businessImpact.alternativeReason}</small></div>
+                   <div><span className="eyebrow">Business impact</span><p>{report?.recommendation?.impact ?? businessImpact.summary}</p><small>{businessImpact.affected}</small></div>
+                   <div><span className="eyebrow">Alternative considered</span><p>{report?.recommendation?.alternatives[0]?.action ?? businessImpact.alternative}</p><small>{report?.recommendation?.alternatives[0]?.reason ?? businessImpact.alternativeReason}</small></div>
                  </div>
               </section>
             </aside>
@@ -752,7 +784,7 @@ function App() {
 
           <section className="panel report-panel animate-in delay-4" id="incident-report">
             <div className="section-heading"><div><span className="eyebrow">Evidence-linked RCA</span><h2>Incident report</h2></div><span className="count-badge">{report?.feedback_count ?? 0} feedback</span></div>
-            {report?.recommendation ? <div className="report-content"><p className="root-cause">{report.recommendation.cause}</p><div className="signal-row"><span>{report.recommendation.confidence_band} confidence</span><span>{report.recommendation.evidence_ids.length} evidence IDs</span><span>{report.recommendation.runbook_ids.length} runbook citation</span></div><p className="policy-reason">Uncertainty: {report.recommendation.uncertainty}</p>{report.validation && <p className="policy-reason">Validation: {report.validation.status} · {report.validation.checks.join(" · ")}</p>}{report.execution?.external_reference && <p className="policy-reason">External reference: {report.execution.external_reference}</p>}</div> : <p className="muted-label">Report becomes available after investigation.</p>}
+            {report?.recommendation ? <div className="report-content"><p className="root-cause">{report.recommendation.cause}</p><div className="signal-row"><span>{report.recommendation.confidence_band} confidence</span><span>{report.recommendation.evidence_ids.length} evidence IDs</span><span>{report.recommendation.runbook_ids.length} runbook citation</span></div><p className="policy-reason">Impact: {report.recommendation.impact}</p><p className="policy-reason">Alternative: {report.recommendation.alternatives[0]?.action} - {report.recommendation.alternatives[0]?.reason}</p><p className="policy-reason">Uncertainty: {report.recommendation.uncertainty}</p>{report.validation && <p className="policy-reason">Validation: {report.validation.status} · {report.validation.checks.join(" · ")}</p>}{report.execution?.external_reference && <p className="policy-reason">External reference: {report.execution.external_reference}</p>}</div> : <p className="muted-label">Report becomes available after investigation.</p>}
             <div className="feedback-form"><input aria-label="Operator feedback" onChange={(event) => setFeedbackText(event.target.value)} placeholder="Add an operator correction" value={feedbackText} /><button className="secondary-button" disabled={!feedbackText.trim()} onClick={() => void submitFeedback()} type="button">Record feedback</button></div>
           </section>
 

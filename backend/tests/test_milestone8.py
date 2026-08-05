@@ -29,3 +29,18 @@ def test_current_policy_is_typed_and_viewer_readable(tmp_path, monkeypatch) -> N
     assert rules["rule-fixture-schema-drift-recovery"]["decision"] == "approval_required"
     assert rules["rule-fixture-schema-drift-recovery"]["required_approver_role"] == "operator"
     assert rules["rule-fixture-read-only-investigation"]["decision"] == "allow"
+
+
+def test_audit_index_is_admin_only_and_filterable(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("PIPELINEPILOT_DATABASE_PATH", str(tmp_path / "audit-index.sqlite3"))
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    operator = {"X-Actor-Id": "operator-m8", "X-Actor-Role": "operator"}
+    admin = {"X-Actor-Id": "admin-m8", "X-Actor-Role": "admin"}
+
+    denied = client.get("/v1/audit-logs", headers=operator)
+    allowed = client.get("/v1/audit-logs", headers=admin, params={"action": "incident.created"})
+
+    assert denied.status_code == 403
+    assert allowed.status_code == 200
+    assert all(item["action"] == "incident.created" for item in allowed.json()["items"])

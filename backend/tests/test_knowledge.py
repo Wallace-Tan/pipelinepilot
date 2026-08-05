@@ -24,6 +24,18 @@ def test_fixture_recommendation_is_typed_and_cited() -> None:
     recommendation = service.recommend(fixture_incident(), fixture_evidence())
     assert recommendation.runbook_ids == ["runbook-schema-drift"]
     assert recommendation.evidence_ids
+    assert recommendation.impact.startswith("Downstream order reporting")
+    assert recommendation.alternatives[0].action == "Wait for the upstream contract update"
+
+
+def test_prior_incident_retrieval_returns_matching_sanitized_history() -> None:
+    repository = KnowledgeRepository(ROOT / "data/runbooks")
+
+    matches = repository.search_prior_incidents("retail_orders_daily schema drift recovery")
+
+    assert matches
+    assert matches[0].document_id == "incident-history-schema-drift-20260716"
+    assert "staging projection" in matches[0].excerpt
 
 
 def test_recommendation_rejects_missing_evidence(tmp_path) -> None:

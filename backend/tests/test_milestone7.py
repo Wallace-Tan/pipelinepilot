@@ -85,6 +85,15 @@ def test_missing_approval_is_blocked_and_reset_is_repeatable(api_client) -> None
     assert client.post("/v1/demo/reset", headers=ADMIN).status_code == 200
 
 
+def test_validation_before_recovery_returns_safe_not_found_error(api_client) -> None:
+    investigate(api_client)
+
+    response = api_client.post(f"/v1/incidents/{INCIDENT}/validate", headers=OPERATOR)
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
 def test_reset_and_status_are_role_and_mode_safe(api_client) -> None:
     client = api_client
     status = client.get("/v1/demo/status").json()
@@ -119,6 +128,8 @@ def test_live_coco_investigation_updates_truthful_adapter_status(tmp_path, monke
             "evidence_ids": evidence_ids,
             "runbook_ids": ["runbook-schema-drift"],
             "recommended_action": "Apply the controlled fixture recovery.",
+            "impact": "Downstream reporting is stale until the schema contract is corrected.",
+            "alternatives": [{"action": "Wait for the upstream contract update", "reason": "Leaves the reporting window stale."}],
             "uncertainty": "Recovery remains fixture-only.",
         }
 

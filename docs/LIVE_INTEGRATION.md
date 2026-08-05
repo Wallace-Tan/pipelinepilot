@@ -108,3 +108,7 @@ Investigation must still complete with fixture evidence, a safe fallback reason,
 ## Evidence record
 
 Record the date, CLI versions, sanitized command results, PipelinePilot investigation response, UI status, fallback response, approval denial, fixture recovery reference, validation, audit, and report. Do not record credentials, connection files, raw sensitive logs, or SQLite files.
+
+## Current verification state
+
+As of 5 August 2026, `cortex.cmd --version` reports `Cortex Code v1.1.53`. The local environment does not have Airflow or Snowflake CLI available and has no configured read-only Airflow URL or CoCo connection, so live verification is pending. Submit the deterministic fixture path unless the preconditions above are completed and `scripts/verify-coco-live.ps1` succeeds.

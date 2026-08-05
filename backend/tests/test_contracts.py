@@ -28,7 +28,9 @@ def test_schema_drift_fixtures_validate_against_contracts() -> None:
     policy = PolicyDocument.model_validate(load_json(POLICY_PATH))
 
     assert incident.status is IncidentStatus.CREATED
+    assert recommendation.schema_version == "recommendation.v2"
     assert recommendation.evidence_ids == [item.id for item in evidence]
+    assert recommendation.alternatives
     assert policy.immutable is True
 
 

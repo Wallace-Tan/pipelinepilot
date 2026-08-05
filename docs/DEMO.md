@@ -25,6 +25,8 @@ npm run dev
 
 Open `http://127.0.0.1:5173/`. The UI must show `fixture`, `database ready`, and the intentionally degraded Snowflake metadata adapter.
 
+For a clean-checkout preflight, run `scripts/verify-submission.ps1` from the repository root. It verifies `uv` setup, backend tests, the frontend production build, and tracked-file hygiene before the browser walkthrough.
+
 ## Optional CoCo-backed investigation
 
 The safe default demo uses fixtures. To exercise the real CoCo integration, authenticate `cortex`, configure its Snowflake connection and Airflow instance, then start the backend with:
@@ -97,15 +99,15 @@ The replay also verifies viewer mutation denial, validation-before-recovery gati
 
 - [ ] Fresh checkout starts without a committed database or credentials.
 - [ ] `uv run pytest` passes.
-- [ ] Frontend TypeScript and Vite builds pass.
-- [ ] Fixture reset returns the seeded incident in `CREATED` state.
-- [ ] Happy path reaches `VALIDATED` and produces a report.
-- [ ] Viewer mutations and missing approval are visibly denied.
-- [ ] Audit events, evidence, report, and fixture/degraded labels are visible.
+- [x] Frontend TypeScript and Vite builds pass; the Windows-safe Vite dev command reaches a ready state.
+- [x] Fixture reset returns the seeded incident in `CREATED` state.
+- [x] Happy path reaches `VALIDATED` and produces a report.
+- [x] Viewer mutations, validation-before-recovery, and missing approval are safely denied.
+- [x] Audit events, evidence, report, and fixture/degraded labels are visible through the API path.
 - [ ] Decision boundary is visible: CoCo evidence, cited proposal, deterministic policy, operator approval, fixture recovery, and validation.
 - [ ] Business impact and the rejected alternative are explained in the recommendation view.
-- [ ] Backup replay completes successfully.
-- [ ] Backup replay proves viewer denial, validation gating, and missing approval.
+- [x] Backup replay completes successfully with `final_status=validated`.
+- [x] Backup replay proves viewer denial, validation gating, and missing approval.
 - [ ] Any recording contains no credentials, raw PII, or generated SQLite files.
 
 ## Submission proof capture

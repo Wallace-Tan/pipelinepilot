@@ -125,6 +125,8 @@ kbd { border: 1px solid var(--hairline-strong); border-radius: 4px; color: var(-
 .audit-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .audit-full-panel { min-width: 0; }
 .audit-search { max-width: 360px; margin-top: 18px; }
+.audit-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--hairline); padding: 12px 0 2px; }
+.audit-toolbar .secondary-button { margin-top: 0; }
 .audit-list-full { margin-top: 14px; }
 .workspace-search { position: absolute; top: calc(100% + 8px); right: clamp(16px, 4vw, 56px); z-index: 5; width: min(420px, calc(100vw - 32px)); border: 1px solid var(--hairline-strong); border-radius: 9px; background: var(--surface-1); box-shadow: rgba(0, 0, 0, .12) 0 8px 24px; padding: 10px; }
 .search-results { display: grid; gap: 4px; border-top: 1px solid var(--hairline); margin-top: 8px; padding-top: 8px; }
@@ -373,6 +375,7 @@ code { border: 1px solid var(--hairline); border-radius: 4px; color: var(--laven
   .runbook-meta { grid-template-columns: 1fr; }
   .runbook-list-item { grid-template-columns: 30px minmax(0, 1fr); }
   .runbook-list-item .runbook-status { grid-column: 2; }
+  .audit-toolbar { align-items: flex-start; flex-direction: column; }
   .exception-row { grid-template-columns: 1fr; gap: 10px; }
   .exception-row .secondary-button { width: fit-content; }
   .filter-note { width: 100%; margin: 6px 0 0; }

@@ -1,0 +1,10 @@
+{
+  "document_id": "incident-history-schema-drift-20260716",
+  "title": "Prior schema drift: orders projection",
+  "pipeline": "retail_orders_daily",
+  "summary": "A previous orders load failed after a source column was added without updating the staging projection.",
+  "root_cause": "The source contract changed before the downstream staging model was updated.",
+  "impact": "Order reporting freshness was delayed for one reporting window.",
+  "resolution": "The staging projection was corrected, the affected dbt models were replayed, and freshness validation passed.",
+  "mode": "fixture"
+}

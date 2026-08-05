@@ -1,5 +1,5 @@
 {
-  "schema_version": "recommendation.v1",
+  "schema_version": "recommendation.v2",
   "id": "rec-retail-orders-schema-drift",
   "incident_id": "inc-retail-orders-20260723",
   "cause": "Upstream raw orders added order_channel, but the staging model projection and contract were not updated before the daily run.",
@@ -12,6 +12,13 @@
   ],
   "runbook_ids": ["runbook-schema-drift"],
   "recommended_action": "Update the fixture staging projection for order_channel, rerun dbt for stg_orders and downstream order models, then validate freshness.",
+  "impact": "Downstream order reporting is stale until the staging contract is corrected and the run is replayed; affected models are stg_orders, fct_orders, and daily_store_revenue.",
+  "alternatives": [
+    {
+      "action": "Wait for the upstream contract update",
+      "reason": "Rejected because it leaves the current reporting window stale without a controlled replay."
+    }
+  ],
   "uncertainty": "Live source ownership and production deployment status are unavailable in fixture mode.",
   "mode": "fixture"
 }

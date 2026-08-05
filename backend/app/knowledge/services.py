@@ -16,9 +16,18 @@ class KnowledgeMatch(StrictContract):
     score: float
 
 
+class PriorIncidentMatch(StrictContract):
+    schema_version: Literal["prior_incident_match.v1"]
+    document_id: str
+    title: str
+    excerpt: str
+    score: float
+
+
 class KnowledgeRepository:
-    def __init__(self, runbooks_path: str | Path) -> None:
+    def __init__(self, runbooks_path: str | Path, incident_records_path: str | Path | None = None) -> None:
         self.runbooks_path = Path(runbooks_path)
+        self.incident_records_path = Path(incident_records_path) if incident_records_path is not None else self.runbooks_path.parent / "incidents"
 
     def search(self, query: str, limit: int = 3) -> list[KnowledgeMatch]:
         terms = {term.lower() for term in query.split() if len(term) > 2}
@@ -34,6 +43,32 @@ class KnowledgeRepository:
                     excerpt=content[:500].strip(),
                     score=float(score),
                 ))
+        return sorted(matches, key=lambda match: (-match.score, match.document_id))[:limit]
+
+    def search_prior_incidents(self, query: str, limit: int = 3) -> list[PriorIncidentMatch]:
+        terms = {term.lower() for term in query.split() if len(term) > 2}
+        matches: list[PriorIncidentMatch] = []
+        for path in sorted(self.incident_records_path.glob("*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            searchable = json.dumps(payload, sort_keys=True).lower()
+            score = sum(searchable.count(term) for term in terms)
+            if not score:
+                continue
+            excerpt = " ".join(
+                str(payload.get(field, "")).strip()
+                for field in ("summary", "root_cause", "impact", "resolution")
+                if payload.get(field)
+            )
+            matches.append(PriorIncidentMatch(
+                schema_version="prior_incident_match.v1",
+                document_id=str(payload.get("document_id", path.stem)),
+                title=str(payload.get("title", path.stem.replace("_", " "))),
+                excerpt=excerpt[:700],
+                score=float(score),
+            ))
         return sorted(matches, key=lambda match: (-match.score, match.document_id))[:limit]
 
 

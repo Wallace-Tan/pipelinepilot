@@ -56,6 +56,8 @@ Milestone 6 adds the `/v1` incident lifecycle API and connects the dashboard to 
 
 Milestone 7 adds the Admin-only fixture reset, demo readiness status, full lifecycle verification, API replay script, and judge walkthrough. Use `DEMO_SCRIPT.md` for the short submission path and `docs/DEMO.md` for the longer recovery instructions.
 
+Before submission, run `scripts/verify-submission.ps1` from the repository root. It validates the documented `uv` backend setup, backend tests, frontend build, and tracked-file hygiene. Use `-SkipInstall` only when dependencies are already installed.
+
 Milestone 8 adds a read-only Policy view backed by `GET /v1/policies/current`. It exposes the active immutable policy, fixture environment, default-deny behavior, approval requirements, and rule constraints without allowing policy changes.
 
 ## CoCo CLI integration

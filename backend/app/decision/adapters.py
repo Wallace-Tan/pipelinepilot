@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from uuid import uuid4
 
-from app.domain.contracts import Evidence, Incident, Recommendation, RuntimeMode
+from app.domain.contracts import Evidence, Incident, Recommendation, RecommendationAlternative, RuntimeMode
 from app.decision.contracts import DecisionResult
 from app.integrations.coco import CocoCliClient, CocoCliError
-from app.knowledge.services import KnowledgeMatch, KnowledgeRepository, RecommendationService
+from app.knowledge.services import KnowledgeMatch, KnowledgeRepository, PriorIncidentMatch, RecommendationService
 
 
 class FixtureDecisionAdapter:
@@ -36,14 +36,17 @@ class CocoDecisionAdapter:
     def decide(self, incident: Incident, evidence: list[Evidence]) -> DecisionResult:
         try:
             matches = self.knowledge_repository.search(f"{incident.summary} schema drift recovery", limit=3)
+            prior_incidents = self.knowledge_repository.search_prior_incidents(f"{incident.summary} schema drift recovery", limit=3)
             value = self.client.prompt_json(
-                self._prompt(incident, evidence, matches),
+                self._prompt(incident, evidence, matches, prior_incidents),
                 required_keys={
                     "cause",
                     "confidence_band",
                     "evidence_ids",
                     "runbook_ids",
                     "recommended_action",
+                    "impact",
+                    "alternatives",
                     "uncertainty",
                 },
             )
@@ -71,7 +74,7 @@ class CocoDecisionAdapter:
         if not set(runbook_ids).issubset(available_runbooks):
             raise ValueError("CoCo cited an unavailable runbook")
         return Recommendation(
-            schema_version="recommendation.v1",
+            schema_version="recommendation.v2",
             id=f"rec-coco-{uuid4().hex}",
             incident_id=incident.id,
             cause=str(value["cause"]),
@@ -79,12 +82,14 @@ class CocoDecisionAdapter:
             evidence_ids=evidence_ids,
             runbook_ids=runbook_ids,
             recommended_action=str(value["recommended_action"]),
+            impact=str(value["impact"]),
+            alternatives=[RecommendationAlternative.model_validate(item) for item in value["alternatives"]],
             uncertainty=str(value["uncertainty"]),
             mode=incident.mode,
         )
 
     @staticmethod
-    def _prompt(incident: Incident, evidence: list[Evidence], matches: list[KnowledgeMatch]) -> str:
+    def _prompt(incident: Incident, evidence: list[Evidence], matches: list[KnowledgeMatch], prior_incidents: list[PriorIncidentMatch]) -> str:
         evidence_context = json.dumps(
             [{"id": item.id, "source": item.source.value, "summary": item.summary, "payload": item.sanitized_payload} for item in evidence],
             sort_keys=True,
@@ -93,10 +98,15 @@ class CocoDecisionAdapter:
             [{"id": item.document_id, "title": item.title, "excerpt": item.excerpt} for item in matches],
             sort_keys=True,
         )
+        prior_incident_context = json.dumps(
+            [{"id": item.document_id, "title": item.title, "excerpt": item.excerpt} for item in prior_incidents],
+            sort_keys=True,
+        )
         return f"""You are the PipelinePilot decision skill. Analyze this sanitized incident using only the supplied evidence and retrieved runbooks.
 Do not invent citations. Do not execute tools or recovery. Return exactly one JSON object with these keys:
-{{"cause": "root cause", "confidence_band": "low|medium|high", "evidence_ids": ["existing evidence IDs"], "runbook_ids": ["existing runbook IDs"], "recommended_action": "controlled action", "uncertainty": "what remains uncertain"}}
+{{"cause": "root cause", "confidence_band": "low|medium|high", "evidence_ids": ["existing evidence IDs"], "runbook_ids": ["existing runbook IDs"], "recommended_action": "controlled action", "impact": "business or freshness impact", "alternatives": [{{"action": "alternative action", "reason": "why it was accepted or rejected"}}], "uncertainty": "what remains uncertain"}}
 Incident: {incident.id} / {incident.pipeline_name} / {incident.run_id}
 Evidence: {evidence_context}
 Runbooks: {runbook_context}
+Prior incidents: {prior_incident_context}
 """

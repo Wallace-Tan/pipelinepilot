@@ -22,7 +22,7 @@ def _evidence(mode: RuntimeMode) -> Evidence:
 
 def _decision(adapter_mode: RuntimeMode, fallback_reason: str | None = None) -> DecisionResult:
     recommendation = Recommendation(
-        schema_version="recommendation.v1",
+        schema_version="recommendation.v2",
         id="rec-status-test",
         incident_id="inc-status-test",
         cause="Schema drift",
@@ -30,6 +30,8 @@ def _decision(adapter_mode: RuntimeMode, fallback_reason: str | None = None) -> 
         evidence_ids=["ev-status-test"],
         runbook_ids=["runbook-schema-drift"],
         recommended_action="Apply the controlled fixture recovery.",
+        impact="Downstream reporting is stale.",
+        alternatives=[{"action": "Wait for upstream", "reason": "Leaves the reporting window stale."}],
         uncertainty="Live ownership is not verified.",
         mode=RuntimeMode.FIXTURE,
     )

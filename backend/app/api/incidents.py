@@ -216,7 +216,8 @@ def validate(request: Request, incident_id: str, identity: RequestIdentity = Dep
         return replay
     incident_repo, _, execution_repo, _, audit_repo, _, _, _, validation_repo = repos(request)
     incident = incident_repo.get(incident_id)
-    execution = execution_repo.list_for_incident(incident_id)[-1] if incident else None
+    executions = execution_repo.list_for_incident(incident_id) if incident else []
+    execution = executions[-1] if executions else None
     if incident is None or execution is None:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident or execution not found."})

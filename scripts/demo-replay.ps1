@@ -25,10 +25,23 @@ function Assert-ExpectedFailure($Method, $Path, $Headers, $ExpectedStatus, $Expe
     } catch {
         if ($_.Exception.Message.StartsWith("Expected $ExpectedCode")) { throw }
         $response = $_.Exception.Response
-        if ($null -eq $response) { throw "Expected $ExpectedCode ($ExpectedStatus) from $Method $Path, but no response was available." }
+        $rawPayload = $_.ErrorDetails.Message
+        $payload = $null
+        if (-not [string]::IsNullOrWhiteSpace($rawPayload)) {
+            try { $payload = $rawPayload | ConvertFrom-Json } catch { $payload = $null }
+        }
+        if ($null -eq $payload -and $null -ne $response) {
+            try {
+                $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+                $rawPayload = $reader.ReadToEnd()
+                $payload = $rawPayload | ConvertFrom-Json
+            } catch {
+                $rawPayload = $null
+                $payload = $null
+            }
+        }
+        if ($null -eq $response -or $null -eq $payload) { throw "Expected $ExpectedCode ($ExpectedStatus) from $Method $Path, but no JSON response body was available." }
         $actualStatus = [int]$response.StatusCode
-        $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
-        $payload = $reader.ReadToEnd() | ConvertFrom-Json
         if ($actualStatus -ne $ExpectedStatus -or $payload.error.code -ne $ExpectedCode) {
             throw "Expected $ExpectedCode ($ExpectedStatus) from $Method $Path, received $($payload.error.code) ($actualStatus)."
         }

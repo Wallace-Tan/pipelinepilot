@@ -64,7 +64,7 @@ Priorities: **P0** must ship for the judged lifecycle; **P1** improves credibili
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | PP-026 | Achieved | Read-only policy UI | Add a dedicated dashboard view for the active immutable policy, rules, risk, approvals, and default-deny behavior. | PP-016, PP-017 | P2 / 8h | Viewer-readable policy metadata and all active rules are visible with loading/error states; no policy mutation is exposed. | `feat(ui): add policy view` |
 
-The judge-ready frontend also includes lightweight supporting views: a searchable fixture runbook catalog, an incident-scoped audit log with local filtering, and local workspace search. These views are intentionally read-only and clearly label the deferred production boundaries: runbook authoring/version publishing, cross-incident audit retention/export, identity federation, and a production search index.
+The judge-ready frontend also includes lightweight supporting views: a searchable fixture runbook catalog, an incident-scoped audit log with local filtering, an optional Admin-authorized audit index, and local workspace search. Recommendation contracts are now `recommendation.v2` with typed impact and alternatives, and sanitized prior-incident records are available to the decision context. These views remain read-only and clearly label the deferred production boundaries: runbook authoring/version publishing, audit retention/export, identity federation, and a production search index.
 
 Remaining stretch: PP-022 embedding retrieval (P2/5h), PP-023 live dbt/Airflow adapters (P2/8h), PP-024 incident similarity/feedback ranking (P2/6h), PP-025 Slack/Jira notification (P2/4h), and PP-027 multi-pipeline routing (P2/8h). Each must retain the contracts and guardrails established above.
 
