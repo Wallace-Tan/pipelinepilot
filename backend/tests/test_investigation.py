@@ -2,12 +2,13 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from app.domain.contracts import Incident, IncidentStatus
+from app.domain.contracts import Incident, IncidentStatus, RuntimeMode
 from app.persistence.database import Database
 from app.persistence.repositories import AuditRepository, EvidenceRepository, IncidentRepository
 from app.security.redaction import RedactionService
 from app.services.investigation import InvestigationService
 from app.skills.adapters import FixtureMonitoringSkill, fixture_skills
+from app.skills.contracts import SkillStatus
 from app.skills.coordinator import SkillCoordinator
 
 
@@ -62,3 +63,24 @@ def test_investigation_preserves_partial_unavailable_skill(tmp_path) -> None:
     assert any(item.degradation_reason == "fixture not found: missing-monitoring.json" for item in result.skill_results)
     assert connection.execute("SELECT COUNT(*) FROM incident_evidence").fetchone()[0] == 3
     assert connection.execute("SELECT COUNT(*) FROM audit_logs WHERE outcome = 'unavailable'").fetchone()[0] == 1
+
+
+def test_coordinator_retains_fixture_fallback_when_live_skill_times_out(tmp_path) -> None:
+    class SlowLiveSkill:
+        name = FixtureMonitoringSkill.name
+        adapter_mode = RuntimeMode.LIVE
+        fallback = FixtureMonitoringSkill(FIXTURES / "monitoring_status.json")
+
+        def collect(self, context):
+            raise TimeoutError("simulated live timeout")
+
+    investigation, database = service(tmp_path, [SlowLiveSkill()])
+
+    result = investigation.investigate(load_incident())
+
+    assert result.degraded is True
+    assert len(result.evidence_ids) == 1
+    assert result.skill_results[0].status is SkillStatus.DEGRADED
+    assert result.skill_results[0].evidence is not None
+    assert "fixture evidence retained" in (result.skill_results[0].degradation_reason or "")
+    assert database.connect().execute("SELECT COUNT(*) FROM incident_evidence").fetchone()[0] == 1

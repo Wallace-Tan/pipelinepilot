@@ -63,7 +63,7 @@ def test_coco_context_retains_fixture_evidence_when_cli_is_unavailable() -> None
 def test_coco_decision_rejects_uncited_evidence_and_uses_fixture_fallback() -> None:
     incident = Incident.model_validate(json.loads((ROOT / "data/fixtures/schema_drift/incident.json").read_text(encoding="utf-8")))
     evidence = [
-        Evidence.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        Evidence.model_validate(json.loads(path.read_text(encoding="utf-8"))).model_copy(update={"mode": RuntimeMode.LIVE})
         for path in (ROOT / "data/fixtures/schema_drift").glob("*.json")
         if path.name not in {"incident.json", "expected_recommendation.json"}
     ]
