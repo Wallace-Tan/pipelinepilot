@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/`. The UI must show `fixture`, `database ready`, and the intentionally degraded Snowflake metadata adapter.
+Open `http://127.0.0.1:5173/` to view the landing page and Evidence Constellation, then select `Open Command Center`. The direct system route is `http://127.0.0.1:5173/app`. The UI must show `fixture`, `database ready`, and the intentionally degraded Snowflake metadata adapter.
 
 For a clean-checkout preflight, run `scripts/verify-submission.ps1` from the repository root. It verifies `uv` setup, backend tests, the frontend production build, and tracked-file hygiene before the browser walkthrough.
 

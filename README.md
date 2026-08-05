@@ -33,7 +33,7 @@ npm run build
 npm run dev
 ```
 
-The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`.
+The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`. The root URL is the PipelinePilot landing page; use `http://127.0.0.1:5173/app` to open the direct Command Center route.
 
 ## Project Docs
 

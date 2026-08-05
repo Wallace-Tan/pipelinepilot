@@ -22,11 +22,11 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/`. If PowerShell resolves a broken user-level npm shim, use `npm.cmd` for install/build/dev.
+Open `http://127.0.0.1:5173/`. The landing page introduces the evidence constellation; click `Open Command Center` or navigate directly to `http://127.0.0.1:5173/app`. If PowerShell resolves a broken user-level npm shim, use `npm.cmd` for install/build/dev.
 
 ## Three-minute primary path
 
-1. **Command Center:** Point out the four operational metrics, four AI employees, Fixture/CoCo status, and the high-priority `retail_orders_daily` exception. Explain that `daily_store_revenue` is stale and this is a business-impacting freshness problem, not just a failed task.
+1. **Landing page and Command Center:** Point out the Airflow, dbt, Snowflake, and Monitoring evidence constellation, then open the Command Center. Point out the four operational metrics, four AI employees, Fixture/CoCo status, and the high-priority `retail_orders_daily` exception. Explain that `daily_store_revenue` is stale and this is a business-impacting freshness problem, not just a failed task.
 2. **Open Workbench:** Click `Open workbench`. Show the exception state, five-stage workflow, evidence from monitoring/Airflow/dbt/Snowflake, citations, high-confidence recommendation, and the approval-required policy.
 3. **Prove the gate:** Click `Try execution — show approval gate` before approval. The toast must show `approval_required`. This is the governance moat: recommendation is not authorization.
 4. **Operator decision:** Optionally click `Edit proposal`, save a clearer recovery plan, then click `Approve fixture recovery`. The status changes to `Approved`, and the audit timeline records the operator decision and justification.
