@@ -55,3 +55,64 @@ test("exception queue filters seeded records", async ({ page }) => {
   await page.getByRole("button", { name: "Open" }).click();
   await expect(page.getByText("retail_orders_daily", { exact: true })).toBeVisible();
 });
+
+test("approval gate rejects recovery and closes the action path", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Reset fixture/ }).click();
+  await page.getByRole("button", { name: "Open workbench" }).click();
+  await page.getByRole("button", { name: "Investigate fixture incident" }).click();
+  await expect(page.getByRole("button", { name: /Try execution/ })).toBeVisible();
+
+  await page.getByRole("button", { name: /Try execution/ }).click();
+  await expect(page.getByText(/approval_required:/)).toBeVisible();
+  await page.getByRole("button", { name: "Reject recovery" }).click();
+
+  await expect(page.locator(".state-value")).toHaveText("Denied");
+  await expect(page.getByRole("button", { name: "Approve fixture recovery" })).toHaveCount(0);
+  await assertAccessible(page);
+});
+
+test("edited proposals remain visible in the approval record", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Reset fixture/ }).click();
+  await page.getByRole("button", { name: "Open workbench" }).click();
+  await page.getByRole("button", { name: "Investigate fixture incident" }).click();
+  await expect(page.getByRole("button", { name: "Edit proposal" })).toBeVisible();
+
+  const editedAction = "Replay the corrected staging model and refresh downstream reporting";
+  await page.getByRole("button", { name: "Edit proposal" }).click();
+  await page.getByRole("textbox", { name: "Edit proposed action" }).fill(editedAction);
+  await page.getByRole("button", { name: /Save proposed action/ }).click();
+  await page.getByRole("button", { name: "Approve fixture recovery" }).click();
+  await expect(page.getByText(new RegExp(`Approve edited recovery plan: ${editedAction}`)).first()).toBeVisible();
+  await assertAccessible(page);
+});
+
+test("read-only views, search empty state, and narrow layout remain usable", async ({ page }) => {
+  await page.setViewportSize({ width: 910, height: 698 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Reset fixture/ }).click();
+
+  for (const view of ["Agent detail", "Execution detail", "Runbooks", "Policy", "Audit log"]) {
+    await page.getByRole("button", { name: new RegExp(`^${view}`) }).click();
+    await expect(page.getByRole("heading", { name: view })).toBeVisible();
+  }
+
+  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("textbox", { name: "Search workspace" }).fill("no-such-workspace-record");
+  await expect(page.getByText("No workspace matches.", { exact: true })).toBeVisible();
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+  await assertAccessible(page);
+});
+
+test("API outage exposes a retryable error without breaking the shell", async ({ page }) => {
+  await page.route("**/v1/demo/status", async (route) => {
+    await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "unavailable" }) });
+  });
+  await page.goto("/");
+
+  await expect(page.getByRole("alert")).toContainText("Demo readiness status is unavailable.");
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Command Center" })).toBeVisible();
+  await assertAccessible(page);
+});
