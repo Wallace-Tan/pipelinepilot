@@ -51,14 +51,16 @@ type RunbookEntry = {
   steps: string[];
 };
 
-type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
+type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; summary: string; detected_at: string; mode: string };
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; mode: string; collected_at: string; citations: { title: string; section: string }[] };
-type ApiRecommendation = { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; impact: string; alternatives: { action: string; reason: string }[]; uncertainty: string };
+type ApiRecommendation = { schema_version: string; cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; impact: string; alternatives: { action: string; reason: string }[]; uncertainty: string };
 type ApiPolicyDecision = { id: string; action: string; decision: string; risk: string; policy_version: string; required_approver_role: string | null; reasons: string[] };
 type ApiApproval = { id: string; created_at: string; decision: string; reason: string; actor_role: string; execution_id: string; policy_version: string };
 type ApiExecution = { id: string; action: string; status: string; policy_decision_id: string; approval_id: string | null; external_reference: string | null; created_at: string; updated_at: string };
 type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: ApiRecommendation | null; policy_decision: ApiPolicyDecision | null; executions: ApiExecution[]; approvals: ApiApproval[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
 type ApiAuditEvent = { id: string; incident_id: string | null; execution_id: string | null; actor_role: string; action: string; outcome: string; created_at: string };
+type ApiAgentDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: ApiRecommendation | null; policy_decision: ApiPolicyDecision | null; adapter_status: Record<string, DemoAdapterStatus>; audit: ApiAuditEvent[] };
+type ApiExecutionDetail = { incident: ApiIncident; execution: ApiExecution; approval: ApiApproval | null; policy_decision: ApiPolicyDecision | null; validation: { status: string; checks: string[]; failure_reason?: string | null } | null; audit: ApiAuditEvent[] };
 type ApiReport = { recommendation: ApiRecommendation | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
 type ApiPolicyRule = { id: string; action: string; environment: string; minimum_role: string; risk: string; decision: string; required_approver_role: string | null; minimum_severity: string | null; max_retry_count: number | null; reasons: string[] };
 type ApiPolicy = { schema_version: "policy.v1"; id: string; version: string; mode: string; immutable: boolean; rules: ApiPolicyRule[]; default_decision: string };
@@ -74,6 +76,24 @@ async function fetchIncident(): Promise<ApiDetail> {
   const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}`);
   if (!response.ok) throw new Error("Incident API is unavailable.");
   return response.json() as Promise<ApiDetail>;
+}
+
+async function fetchIncidents(): Promise<{ items: ApiIncident[]; total: number }> {
+  const response = await fetch("/v1/incidents?limit=100");
+  if (!response.ok) throw new Error("Incident queue is unavailable.");
+  return response.json() as Promise<{ items: ApiIncident[]; total: number }>;
+}
+
+async function fetchAgentDetail(): Promise<ApiAgentDetail> {
+  const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/agent`);
+  if (!response.ok) throw new Error("Agent detail is unavailable.");
+  return response.json() as Promise<ApiAgentDetail>;
+}
+
+async function fetchExecutionDetail(executionId: string): Promise<ApiExecutionDetail> {
+  const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/executions/${executionId}`);
+  if (!response.ok) throw new Error("Execution detail is unavailable.");
+  return response.json() as Promise<ApiExecutionDetail>;
 }
 
 function mapIncident(value: ApiIncident) {
@@ -137,6 +157,42 @@ function AgentExecutionDetail({ detail, demoStatus }: { detail: ApiDetail | null
       <div className="detail-boundary-note"><Icon name="shield" size={14} /><span>Agent output is advisory. The persisted policy decision, approval identity, and execution reference are the accountable recovery boundary.</span></div>
     </section>
   );
+}
+
+function AgentDetailView({ resource, loading, error, onRetry }: { resource: ApiAgentDetail | null; loading: boolean; error: string | null; onRetry: () => void }) {
+  return <div className="detail-view animate-in">
+    <section className="page-heading"><div><span className="eyebrow">First-class resource</span><h1>Agent detail</h1><p className="subhead">The evidence and recommendation boundary exposed as a typed, read-only resource.</p></div><span className="page-readiness"><span className="status-dot is-emerald" />Viewer-readable</span></section>
+    {loading && <div className="panel detail-state" role="status">Loading agent resource…</div>}
+    {error && <div className="panel detail-state is-error" role="alert">{error}<button className="text-action" onClick={onRetry} type="button">Retry</button></div>}
+    {resource && <>
+      <section className="metric-grid" aria-label="Agent resource summary">
+        <div className="panel metric-card"><span className="eyebrow">Incident</span><strong>{resource.incident.pipeline_name}</strong><small>{formatDetailStatus(resource.incident.status)}</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Evidence</span><strong>{resource.evidence.length}</strong><small>typed sources persisted</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Decision</span><strong>{resource.recommendation ? "Validated" : "Pending"}</strong><small>{resource.recommendation?.confidence_band ?? "No recommendation"}</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Policy</span><strong>{resource.policy_decision ? formatDetailStatus(resource.policy_decision.decision) : "Pending"}</strong><small>{resource.policy_decision?.policy_version ?? "No policy result"}</small></div>
+      </section>
+      <section className="panel detail-resource-panel"><div className="section-heading"><div><span className="eyebrow">Context adapters</span><h2>Evidence provenance</h2></div><span className="count-badge">{Object.keys(resource.adapter_status).length} adapters</span></div><div className="resource-list">{Object.entries(resource.adapter_status).map(([name, status]) => <div className="resource-row" key={name}><strong>{formatDetailStatus(name)}</strong><span>{formatDetailStatus(status.status)}</span><small>{status.mode} · {status.source}{status.reason ? ` · ${status.reason}` : ""}</small></div>)}</div></section>
+      <section className="panel detail-resource-panel"><div className="section-heading"><div><span className="eyebrow">Recommendation contract</span><h2>{resource.recommendation?.cause ?? "No recommendation yet"}</h2></div><span className="count-badge">{resource.recommendation?.schema_version ?? "pending"}</span></div>{resource.recommendation ? <div className="report-content"><p className="policy-reason">Impact: {resource.recommendation.impact}</p><p className="policy-reason">Alternative: {resource.recommendation.alternatives[0]?.action} — {resource.recommendation.alternatives[0]?.reason}</p><p className="policy-reason">Citations: {resource.recommendation.evidence_ids.join(" · ")} · {resource.recommendation.runbook_ids.join(" · ")}</p></div> : <p className="empty-state">Investigate the incident to create a typed recommendation.</p>}</section>
+    </>}
+  </div>;
+}
+
+function ExecutionDetailView({ resource, loading, error, onRetry }: { resource: ApiExecutionDetail | null; loading: boolean; error: string | null; onRetry: () => void }) {
+  return <div className="detail-view animate-in">
+    <section className="page-heading"><div><span className="eyebrow">First-class resource</span><h1>Execution detail</h1><p className="subhead">The policy, approval, fixture reference, and validation evidence for one recovery attempt.</p></div><span className="page-readiness"><span className="status-dot is-emerald" />Governed boundary</span></section>
+    {loading && <div className="panel detail-state" role="status">Loading execution resource…</div>}
+    {error && <div className="panel detail-state is-error" role="alert">{error}<button className="text-action" onClick={onRetry} type="button">Retry</button></div>}
+    {resource && <>
+      <section className="metric-grid" aria-label="Execution resource summary">
+        <div className="panel metric-card"><span className="eyebrow">Status</span><strong>{formatDetailStatus(resource.execution.status)}</strong><small>{resource.execution.id}</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Policy</span><strong>{formatDetailStatus(resource.policy_decision?.decision ?? "unknown")}</strong><small>{resource.policy_decision?.policy_version ?? "not available"}</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Approval</span><strong>{resource.approval ? formatDetailStatus(resource.approval.decision) : "Missing"}</strong><small>{resource.approval?.actor_role ?? "No accountable actor"}</small></div>
+        <div className="panel metric-card"><span className="eyebrow">Validation</span><strong>{resource.validation ? formatDetailStatus(resource.validation.status) : "Pending"}</strong><small>{resource.validation?.checks.length ?? 0} checks</small></div>
+      </section>
+      <section className="panel detail-resource-panel"><div className="section-heading"><div><span className="eyebrow">Execution record</span><h2>{resource.execution.action}</h2></div><span className="count-badge">fixture-only</span></div><div className="resource-list"><div className="resource-row"><strong>External reference</strong><span>{resource.execution.external_reference ?? "None"}</span><small>Recovery writes never cross the fixture boundary.</small></div><div className="resource-row"><strong>Approval justification</strong><span>{resource.approval?.reason ?? "No approval recorded"}</span><small>{resource.approval ? `${resource.approval.actor_role} · ${resource.approval.created_at}` : "Execution must remain blocked."}</small></div><div className="resource-row"><strong>Validation checks</strong><span>{resource.validation?.checks.join(" · ") ?? "Not run"}</span><small>{resource.validation?.failure_reason ?? "Audit-backed execution state."}</small></div></div></section>
+      <section className="panel detail-resource-panel"><div className="section-heading"><div><span className="eyebrow">Execution audit</span><h2>Append-only events</h2></div><span className="count-badge">{resource.audit.length}</span></div><div className="audit-list">{resource.audit.map((event) => <div className="audit-entry" key={event.id}><span className="audit-marker is-success" /><time>{new Date(event.created_at).toLocaleTimeString()}</time><div><strong>{event.action}</strong><span>{event.outcome}</span></div><small>{event.actor_role}</small></div>)}</div></section>
+    </>}
+  </div>;
 }
 
 type IconName =
@@ -361,20 +417,30 @@ function PolicyView({ policy, loading, error, onRetry }: { policy: ApiPolicy | n
 
 function CommandCenter({
   incident,
+  incidents,
   evidenceCount,
   report,
   integrationLabel,
   onOpenWorkbench,
+  onNotice,
 }: {
   incident: IncidentViewModel;
+  incidents: ApiIncident[];
   evidenceCount: number;
   report: ApiReport | null;
   integrationLabel: string;
   onOpenWorkbench: () => void;
+  onNotice: (message: string) => void;
 }) {
+  const [queueFilter, setQueueFilter] = useState<"all" | "open" | "resolved">("all");
   const validated = incident.status === "Validated";
   const recovered = isCompletedStatus(incident.status);
   const exceptionState = validated ? "Closed" : incident.status === "Created" ? "Needs investigation" : "Open";
+  const queueItems = incidents.filter((item) => {
+    if (queueFilter === "open") return !["validated", "reported", "failed", "denied"].includes(item.status);
+    if (queueFilter === "resolved") return ["validated", "reported", "failed", "denied"].includes(item.status);
+    return true;
+  });
   const employees = [
     { name: "Signal Sentinel", role: "Monitoring employee", status: "Healthy", detail: "Watching retail_orders_daily", icon: "activity" as IconName, tone: "emerald" },
     { name: "Evidence Analyst", role: "Investigation employee", status: incident.status === "Created" ? "Ready" : "Evidence assembled", detail: `${evidenceCount} cited sources`, icon: "spark" as IconName, tone: "blue" },
@@ -413,10 +479,21 @@ function CommandCenter({
 
       <section className="exception-panel panel" aria-label="Exception queue">
         <div className="section-heading"><div><span className="eyebrow">Exception queue</span><h2>Attention required</h2></div><span className={`queue-state ${validated ? "is-closed" : "is-open"}`}>{exceptionState}</span></div>
-        <div className="exception-row">
-          <div className="exception-priority"><span className="signal-dot" /><span>High</span></div>
-          <div className="exception-main"><strong>{incident.pipeline}</strong><span>Schema drift blocked the staging projection; downstream order reporting is stale.</span><small>{incident.runId} · {statusLabel(incident.status)} · {businessImpact.affected}</small></div>
-          <button className="secondary-button" onClick={onOpenWorkbench} type="button">{validated ? "Review resolution" : "Open workbench"}<Icon name="arrow" size={14} /></button>
+        <div className="queue-toolbar" role="group" aria-label="Exception queue filters">
+          {(["all", "open", "resolved"] as const).map((option) => <button className={`filter-button ${queueFilter === option ? "is-active" : ""}`} aria-pressed={queueFilter === option} key={option} onClick={() => setQueueFilter(option)} type="button">{option === "all" ? "All" : option === "open" ? "Open" : "Resolved"}</button>)}
+          <span className="filter-note">{queueItems.length} of {incidents.length} records</span>
+        </div>
+        <div className="exception-list">
+          {queueItems.map((item) => {
+            const isPrimary = item.id === API_INCIDENT_ID;
+            const itemResolved = ["validated", "reported", "failed", "denied"].includes(item.status);
+            return <div className={`exception-row ${itemResolved ? "is-resolved" : ""}`} key={item.id}>
+              <div className="exception-priority"><span className={`signal-dot ${itemResolved ? "is-emerald" : ""}`} /><span>{formatDetailStatus(item.severity)}</span></div>
+              <div className="exception-main"><strong>{item.pipeline_name}</strong><span>{item.summary}</span><small>{item.run_id} · {formatDetailStatus(item.status)}{isPrimary ? ` · ${businessImpact.affected}` : ""}</small></div>
+              {isPrimary ? <button className="secondary-button" onClick={onOpenWorkbench} type="button">{validated ? "Review resolution" : "Open workbench"}<Icon name="arrow" size={14} /></button> : <button className="secondary-button" onClick={() => onNotice("This seeded queue record is read-only; the governed walkthrough uses the schema-drift incident.")} type="button">View record<Icon name="arrow" size={14} /></button>}
+            </div>;
+          })}
+          {queueItems.length === 0 && <p className="empty-state">No queue records match this filter.</p>}
         </div>
       </section>
 
@@ -538,6 +615,12 @@ function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null);
   const [liveDetail, setLiveDetail] = useState<ApiDetail | null>(null);
+  const [queueIncidents, setQueueIncidents] = useState<ApiIncident[]>([]);
+  const [agentResource, setAgentResource] = useState<ApiAgentDetail | null>(null);
+  const [agentResourceError, setAgentResourceError] = useState<string | null>(null);
+  const [executionResource, setExecutionResource] = useState<ApiExecutionDetail | null>(null);
+  const [executionResourceError, setExecutionResourceError] = useState<string | null>(null);
+  const [resourceLoading, setResourceLoading] = useState(false);
   const [report, setReport] = useState<ApiReport | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [livePolicyDocument, setLivePolicyDocument] = useState<ApiPolicy | null>(null);
@@ -566,12 +649,27 @@ function App() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const [detail, statusResponse, reportResponse, policyResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status"), fetch(`/v1/incidents/${API_INCIDENT_ID}/report`), fetch("/v1/policies/current")]);
+      const [detail, statusResponse, reportResponse, policyResponse, queueResponse, agentResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status"), fetch(`/v1/incidents/${API_INCIDENT_ID}/report`), fetch("/v1/policies/current"), fetchIncidents(), fetchAgentDetail()]);
       if (!statusResponse.ok) throw new Error("Demo readiness status is unavailable.");
       setDemoStatus(await statusResponse.json() as DemoStatus);
       const reportData = reportResponse.ok ? await reportResponse.json() as ApiReport : null;
       setReport(reportData);
       setLiveDetail(detail);
+      setQueueIncidents(queueResponse.items);
+      setAgentResource(agentResponse);
+      setAgentResourceError(null);
+      const latestExecution = detail.executions.at(-1);
+      if (latestExecution) {
+        try {
+          setExecutionResource(await fetchExecutionDetail(latestExecution.id));
+          setExecutionResourceError(null);
+        } catch (error) {
+          setExecutionResourceError(error instanceof Error ? error.message : "Execution detail is unavailable.");
+        }
+      } else {
+        setExecutionResource(null);
+        setExecutionResourceError(null);
+      }
       if (policyResponse.ok) {
         const policyData = await policyResponse.json() as ApiPolicyResponse;
         setLivePolicyDocument(policyData.policy);
@@ -601,6 +699,35 @@ function App() {
   };
 
   useEffect(() => { void refresh(); }, []);
+
+  const reloadAgentResource = async () => {
+    setResourceLoading(true);
+    try {
+      setAgentResource(await fetchAgentDetail());
+      setAgentResourceError(null);
+    } catch (error) {
+      setAgentResourceError(error instanceof Error ? error.message : "Agent detail is unavailable.");
+    } finally {
+      setResourceLoading(false);
+    }
+  };
+
+  const reloadExecutionResource = async () => {
+    const executionId = liveDetail?.executions.at(-1)?.id;
+    if (!executionId) {
+      setExecutionResourceError("No execution exists for this incident yet.");
+      return;
+    }
+    setResourceLoading(true);
+    try {
+      setExecutionResource(await fetchExecutionDetail(executionId));
+      setExecutionResourceError(null);
+    } catch (error) {
+      setExecutionResourceError(error instanceof Error ? error.message : "Execution detail is unavailable.");
+    } finally {
+      setResourceLoading(false);
+    }
+  };
 
   const resetDemo = async () => {
     setLoading(true);
@@ -691,8 +818,8 @@ function App() {
         </div>
         <div className="rail-label">Workspace</div>
         <nav className="main-nav">
-          {[{ label: "Overview", icon: "grid" as IconName }, { label: "Workbench", icon: "activity" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
-            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { if (item.label === "Workbench") openWorkbench(); else { setActiveNav(item.label); setSearchOpen(false); } }} type="button">
+          {[{ label: "Overview", icon: "grid" as IconName }, { label: "Workbench", icon: "activity" as IconName }, { label: "Agent detail", icon: "spark" as IconName }, { label: "Execution detail", icon: "terminal" as IconName }, { label: "Runbooks", icon: "file" as IconName }, { label: "Policy", icon: "shield" as IconName }, { label: "Audit log", icon: "clipboard" as IconName }].map((item) => (
+            <button className={`nav-item ${activeNav === item.label ? "is-active" : ""}`} key={item.label} onClick={() => { if (item.label === "Workbench") openWorkbench(); else { setActiveNav(item.label); setSearchOpen(false); if (item.label === "Agent detail") void reloadAgentResource(); if (item.label === "Execution detail") void reloadExecutionResource(); } }} type="button">
               <Icon name={item.icon} />
               <span>{item.label}</span>
               {item.label === "Workbench" && <span className="nav-count">1</span>}
@@ -729,7 +856,7 @@ function App() {
           {loading && <div className="api-banner is-loading" role="status"><span className="status-dot is-emerald" />Loading persisted incident state…</div>}
           {apiError && <div className="api-banner is-error" role="alert"><span className="signal-dot" />{apiError} <button className="text-action" onClick={() => void refresh()} type="button">Retry</button></div>}
           {demoStatus && <div className="api-banner is-ready" role="status"><span className="status-dot is-emerald" />{demoStatus.fixture} · {demoStatus.mode} · database ready · {integration.label} · {integration.detail} · recovery fixture-only</div>}
-          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} /> : activeNav === "Runbooks" ? <RunbooksView onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : activeNav === "Audit log" ? <AuditLogView entries={liveAudit} onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : <>
+          {activeNav === "Policy" ? <PolicyView policy={livePolicyDocument} loading={loading} error={policyError} onRetry={() => void refresh()} /> : activeNav === "Agent detail" ? <AgentDetailView resource={agentResource} loading={loading || resourceLoading} error={agentResourceError} onRetry={() => void reloadAgentResource()} /> : activeNav === "Execution detail" ? <ExecutionDetailView resource={executionResource} loading={loading || resourceLoading} error={executionResourceError} onRetry={() => void reloadExecutionResource()} /> : activeNav === "Overview" ? <CommandCenter incident={liveIncident} incidents={queueIncidents} evidenceCount={liveEvidence.length} report={report} integrationLabel={integration.label} onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : activeNav === "Runbooks" ? <RunbooksView onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : activeNav === "Audit log" ? <AuditLogView entries={liveAudit} onOpenWorkbench={openWorkbench} onNotice={setNotice} /> : <>
           <section className="incident-header animate-in" id="incident-overview">
             <div>
               <div className="eyebrow-row"><span className="eyebrow">Exception Workbench</span><span className="badge badge-warning"><span className="signal-dot" />{liveIncident.severity} priority</span></div>
