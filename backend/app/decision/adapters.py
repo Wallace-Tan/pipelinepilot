@@ -34,6 +34,13 @@ class CocoDecisionAdapter:
         self.fallback = fallback
 
     def decide(self, incident: Incident, evidence: list[Evidence]) -> DecisionResult:
+        if evidence and all(item.mode is RuntimeMode.FIXTURE for item in evidence):
+            fallback_result = self.fallback.decide(incident, evidence)
+            return fallback_result.model_copy(
+                update={
+                    "fallback_reason": "CoCo decision unavailable because context was incomplete; deterministic fixture fallback selected.",
+                }
+            )
         try:
             matches = self.knowledge_repository.search(f"{incident.summary} schema drift recovery", limit=3)
             prior_incidents = self.knowledge_repository.search_prior_incidents(f"{incident.summary} schema drift recovery", limit=3)

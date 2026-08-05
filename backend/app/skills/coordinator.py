@@ -30,14 +30,14 @@ class SkillCoordinator:
                 try:
                     result = future.result()
                 except Exception:
-                    result = self._unavailable(skill, "skill execution failed")
+                    result = self._fallback_or_unavailable(skill, context, "skill execution failed")
                 results[skill.name.value] = result
             if not done:
                 break
         for future in pending:
             skill = futures[future]
             future.cancel()
-            results[skill.name.value] = self._unavailable(skill, "skill timed out")
+            results[skill.name.value] = self._fallback_or_unavailable(skill, context, "skill timed out")
         executor.shutdown(wait=False, cancel_futures=True)
         return [results[skill.name.value] for skill in sorted(self.skills, key=lambda item: item.name.value)]
 
@@ -46,7 +46,20 @@ class SkillCoordinator:
         return SkillResult.model_validate(skill.collect(context))
 
     @staticmethod
-    def _unavailable(skill: ContextSkill, reason: str) -> SkillResult:
+    def _fallback_or_unavailable(skill: ContextSkill, context: SkillContext, reason: str) -> SkillResult:
+        fallback = getattr(skill, "fallback", None)
+        if fallback is not None:
+            try:
+                fallback_result = fallback.collect(context)
+            except Exception:
+                pass
+            else:
+                return fallback_result.model_copy(
+                    update={
+                        "status": SkillStatus.DEGRADED,
+                        "degradation_reason": f"CoCo context {reason}; fixture evidence retained.",
+                    }
+                )
         return SkillResult(
             schema_version="skill_result.v1",
             skill_name=skill.name,
