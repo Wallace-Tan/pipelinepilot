@@ -27,6 +27,15 @@ Open `http://127.0.0.1:5173/`. The UI must show `fixture`, `database ready`, and
 
 For a clean-checkout preflight, run `scripts/verify-submission.ps1` from the repository root. It verifies `uv` setup, backend tests, the frontend production build, and tracked-file hygiene before the browser walkthrough.
 
+When port `8000` is already occupied by another local demo process, run the proof workflow against an isolated temporary API/database instead of editing the repository database. Start the backend with `PIPELINEPILOT_DATABASE_PATH` set to a temporary SQLite path and point Vite at it with:
+
+```powershell
+$env:PIPELINEPILOT_API_URL = "http://127.0.0.1:8001"
+npm run dev -- --host 127.0.0.1 --port 5177
+```
+
+The `PIPELINEPILOT_API_URL` override is supported by `frontend/vite.config.ts`; it affects only the Vite proxy. The UI must still show `fixture`, `database ready`, and `recovery fixture-only`.
+
 ## Optional CoCo-backed investigation
 
 The safe default demo uses fixtures. To exercise the real CoCo integration, authenticate `cortex`, configure its Snowflake connection and Airflow instance, then start the backend with:
@@ -97,15 +106,15 @@ The replay also verifies viewer mutation denial, validation-before-recovery gati
 
 ## Submission Checklist
 
-- [ ] Fresh checkout starts without a committed database or credentials.
-- [ ] `uv run pytest` passes.
+- [x] Fresh checkout starts without a committed database or credentials.
+- [x] `uv sync` and `uv run pytest` pass from `backend`.
 - [x] Frontend TypeScript and Vite builds pass; the Windows-safe Vite dev command reaches a ready state.
 - [x] Fixture reset returns the seeded incident in `CREATED` state.
 - [x] Happy path reaches `VALIDATED` and produces a report.
 - [x] Viewer mutations, validation-before-recovery, and missing approval are safely denied.
 - [x] Audit events, evidence, report, and fixture/degraded labels are visible through the API path.
-- [ ] Decision boundary is visible: CoCo evidence, cited proposal, deterministic policy, operator approval, fixture recovery, and validation.
-- [ ] Business impact and the rejected alternative are explained in the recommendation view.
+- [x] Decision boundary is visible: CoCo evidence or truthful fixture fallback, cited proposal, deterministic policy, operator approval, fixture recovery, and validation.
+- [x] Business impact and the rejected alternative are explained in the recommendation view.
 - [x] Backup replay completes successfully with `final_status=validated`.
 - [x] Backup replay proves viewer denial, validation gating, and missing approval.
 - [ ] Any recording contains no credentials, raw PII, or generated SQLite files.
@@ -121,3 +130,5 @@ For a live demo, capture these moments in order:
 5. Operator approval, fixture recovery reference, validation, audit timeline, and RCA.
 
 The repository remains honest in either mode: live evidence is marked `live`, fallback evidence is marked `fixture`, and recovery is always labeled fixture-only.
+
+The verified browser proof for this checkout was completed in an isolated temporary runtime. The proof captures are stored outside the repository in the Codex submission-proof folder; do not commit them, the temporary SQLite database, or server logs. The external backup recording remains the only unchecked submission asset.

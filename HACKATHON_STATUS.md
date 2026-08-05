@@ -65,10 +65,11 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 - `frontend`: `npm.cmd run build` passes (TypeScript project build plus Vite production build); `npm.cmd run dev -- --host 127.0.0.1` reaches the Vite ready state using the Windows-safe config loader.
 - `frontend`: no lint command is configured in `frontend/package.json`; no unsupported lint command is claimed.
-- `backend`: canonical commands remain `uv sync` and `uv run pytest`. `uv` is unavailable and the existing local virtual environment points to a removed Python executable, so the canonical launcher could not be used; with the bundled Python 3.12 runtime and intact environment packages, the full suite passes: `47 passed, 1 warning`.
-- Runtime smoke test: `/health` returned `ok`, `/v1/demo/status` returned fixture mode with `database_ready=true`, and `scripts/demo-replay.ps1` completed with `final_status=validated` in `0.8s`.
+- `backend`: `uv 0.12.1` and the bundled Python 3.12 runtime are available. `uv sync` completes from `backend`, and `uv run pytest` passes the full suite (`48 passed`, with only environment/deprecation warnings).
+- Runtime smoke test: `/health` returned `ok`, `/v1/demo/status` returned fixture mode with `database_ready=true`, and `scripts/demo-replay.ps1` completed with `final_status=validated` in `0.97s` against an isolated temporary demo database.
 - `scripts/demo-replay.ps1`: now parses PowerShell error envelopes reliably and verifies viewer denial, validation-before-recovery gating, missing approval, recovery, validation, and final report output against `scripts/demo-replay.expected.json`.
-- `scripts/verify-submission.ps1` is the clean-checkout preflight for `uv`, backend tests, frontend build, and tracked-file hygiene; it remains unrun locally because `uv` is not installed.
+- `scripts/verify-submission.ps1 -SkipInstall` passes the clean-checkout preflight: backend tests, frontend build, and tracked-file hygiene report zero sensitive tracked files.
+- Browser proof: an isolated frontend/backend run completed reset, investigation, evidence review, pre-approval denial, operator approval, fixture recovery, validation, Command Center refresh, and Audit/RCA verification without database edits.
 - No credentials, raw logs, committed SQLite database, or live-recovery claims are part of the submission slice.
 
 ## Demo risk and mitigation
