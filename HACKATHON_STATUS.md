@@ -65,12 +65,13 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 - `frontend`: `npm.cmd run build` passes (TypeScript project build plus Vite production build); `npm.cmd run dev -- --host 127.0.0.1` reaches the Vite ready state using the Windows-safe config loader.
 - `frontend`: no lint command is configured in `frontend/package.json`; no unsupported lint command is claimed.
-- `backend`: `uv 0.12.1` and the bundled Python 3.12 runtime are available. `uv sync` completes from `backend`, and `uv run pytest` passes the full suite (`48 passed`, with only environment/deprecation warnings).
+- `backend`: `uv 0.12.1` and the bundled Python 3.12 runtime are available. `uv sync` completes from `backend`, and `uv run pytest` passes the full suite (`50 passed`, with only environment/deprecation warnings).
 - Runtime smoke test: `/health` returned `ok`, `/v1/demo/status` returned fixture mode with `database_ready=true`, and `scripts/demo-replay.ps1` completed with `final_status=validated` in `0.97s` against an isolated temporary demo database.
 - `scripts/demo-replay.ps1`: now parses PowerShell error envelopes reliably and verifies viewer denial, validation-before-recovery gating, missing approval, recovery, validation, and final report output against `scripts/demo-replay.expected.json`.
 - `scripts/verify-submission.ps1 -SkipInstall` passes the clean-checkout preflight: backend tests, frontend build, and tracked-file hygiene report zero sensitive tracked files.
 - Browser proof: an isolated frontend/backend run completed reset, investigation, evidence review, pre-approval denial, operator approval, fixture recovery, validation, Command Center refresh, and Audit/RCA verification without database edits.
 - Browser automation: `npm run test:e2e` passes two Playwright scenarios, including the complete governed lifecycle, queue filtering, named-control checks, and input-label checks. Chromium installation is required once per clean machine.
+- Submission proof captures: sanitized Command Center, Workbench, policy-gate, evidence, audit, RCA, and final-state screenshots are stored outside the repository; a recording is not required for this handoff.
 - No credentials, raw logs, committed SQLite database, or live-recovery claims are part of the submission slice.
 
 ## Demo risk and mitigation
