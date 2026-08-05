@@ -2,7 +2,18 @@
 
 ## Submission Positioning
 
-PipelinePilot is a governed operational workflow, not a chat interface. Snowflake CoCo CLI directs a sequence of purpose-built skills, correlates sanitized evidence with organization-specific runbooks, and returns a structured recommendation. A deterministic policy engine and human approval control whether any recovery can happen.
+PipelinePilot is the control plane between AI investigation and operational action, not another incident chatbot. CoCo investigates across Airflow, dbt, and Snowflake through purpose-built skills, correlates sanitized evidence with organization-specific runbooks, and returns a structured recommendation. A deterministic policy engine and accountable operator control whether any recovery can happen.
+
+Positioning line: “CoCo can assemble the context, but only typed evidence, deterministic policy, and an accountable operator can move a recovery forward.”
+
+```mermaid
+flowchart LR
+  C["CoCo: Airflow + dbt + Snowflake context"] --> D["Decision skill: cited proposal"]
+  D --> P["Policy engine: risk + permission"]
+  P --> A["Operator approval"]
+  A --> R["Recovery skill: fixture-only boundary"]
+  R --> V["Validation + audit RCA"]
+```
 
 ## Judging Criteria Mapping
 
@@ -18,9 +29,9 @@ PipelinePilot is a governed operational workflow, not a chat interface. Snowflak
 
 **0:35–1:20 — Detection and investigation.** Open the seeded failed incident and click `Investigate fixture incident`. Show the timeline: monitoring, log signature, dbt failure, and intentionally degraded read-only metadata. Point out the persistent Fixture mode and adapter status labels.
 
-**1:20–2:10 — Recommendation and knowledge.** Show the typed deterministic fixture recommendation and retrieved schema-change runbook. Emphasize that only sanitized evidence and cited documents reach the reasoning boundary. Read the structured diagnosis: schema drift, high confidence band, evidence references, and a proposed controlled recovery.
+**1:20–2:10 — Recommendation and knowledge.** Show the typed CoCo or fixture recommendation and retrieved schema-change runbook. Emphasize that only sanitized evidence and cited documents reach the reasoning boundary. Read the structured diagnosis: schema drift, high confidence band, evidence references, business impact on stale downstream reporting, and a proposed controlled recovery.
 
-**2:10–3:05 — Governance.** Show policy result: risk and `APPROVAL_REQUIRED`. Attempting execution is unavailable. Explain that the model cannot override the deterministic rule or call Airflow directly.
+**2:10–3:05 — Governance.** Use the pre-approval execution control and show `approval_required`. Explain the boundary: CoCo proposes, Policy decides, and the model cannot override the deterministic rule or call Airflow directly.
 
 **3:05–4:00 — Human approval and recovery.** Use the Operator fixture identity to approve. Start the idempotent recovery through the Recovery skill. Show the audit event containing actor, action, policy version, correlation ID, and fixture reference.
 

@@ -1,6 +1,6 @@
 ﻿# PipelinePilot
 
-PipelinePilot is a governed incident workflow demo for a retail schema-drift failure. The current MVP includes typed context skills, a deterministic fixture decision fallback, SQLite persistence, fixture-mode request identity/RBAC, redaction, governed recovery, a versioned API, and an API-backed dashboard.
+PipelinePilot is the control plane between AI investigation and operational action. CoCo investigates a retail schema-drift failure across Airflow, dbt, and Snowflake; PipelinePilot turns the sanitized evidence into a cited recovery proposal, applies deterministic policy, requires accountable operator approval, and records the validated result. The current MVP includes typed context skills, a deterministic fixture decision fallback, SQLite persistence, fixture-mode request identity/RBAC, redaction, governed recovery, a versioned API, and an API-backed dashboard.
 
 ## Prerequisites
 
@@ -58,9 +58,11 @@ Milestone 8 adds a read-only Policy view backed by `GET /v1/policies/current`. I
 
 ## CoCo CLI integration
 
-Install and authenticate the Snowflake CoCo CLI, then verify the connection with `cortex --version` and a read-only prompt. CoCo requires a Snowflake connection with `SNOWFLAKE.CORTEX_USER` or `SNOWFLAKE.CORTEX_AGENT_USER`; Airflow access is configured through the CoCo Airflow integration. See `docs/DEMO.md` for the live-mode launch command. Never commit `connections.toml`, tokens, or Airflow credentials.
+Install and authenticate the Snowflake CoCo CLI, then verify the connection with `cortex --version` and a read-only prompt. CoCo requires a Snowflake connection with `SNOWFLAKE.CORTEX_USER` or `SNOWFLAKE.CORTEX_AGENT_USER`; Airflow access is configured through the CoCo Airflow integration. See `docs/DEMO.md` for the live-mode launch command. Never commit `connections.toml`, tokens, or Airflow credentials. A live claim is valid only after PipelinePilot receives schema-valid live evidence; a successful CLI login alone is not proof of integration.
 
 On native Windows, the installed wrapper may be `cortex.cmd` under `%LOCALAPPDATA%\cortex\bin`. Add that directory to the current PowerShell session and set `PIPELINEPILOT_COCO_COMMAND=cortex.cmd` before starting the backend.
+
+If PowerShell resolves `npm` to a broken user-level `npm.ps1`, use `npm.cmd` for the documented install/build commands. This does not change the application; it selects the Node.js installation's native Windows launcher.
 
 ## Fixture-mode security
 

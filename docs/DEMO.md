@@ -57,8 +57,8 @@ If the backend is stopped, use `scripts/reset-fixture.ps1`, then restart the bac
 1. **0:00–0:35 — Detect:** Show the failed `retail_orders_daily` incident, high severity, run identifier, and Fixture mode.
 2. **0:35–0:55 — Policy:** Open the read-only Policy view; show the immutable fixture policy, version, default-deny behavior, and approval-required schema-drift rule.
 3. **0:55–1:35 — Investigate:** Click `Investigate fixture incident`; show monitoring, Airflow log, dbt, and degraded Snowflake metadata evidence.
-4. **1:35–2:20 — Recommend:** Show the schema-drift recommendation, high confidence, cited evidence IDs, and `runbook-schema-drift` citation.
-5. **2:20–3:05 — Govern:** Show the `APPROVAL_REQUIRED` policy gate. Execution before approval returns a safe `approval_required` error.
+4. **1:35–2:20 — Recommend:** Show the schema-drift recommendation, high confidence, cited evidence IDs, `runbook-schema-drift` citation, and the business impact: stale `stg_orders`, `fct_orders`, and `daily_store_revenue` reporting.
+5. **2:20–3:05 — Govern:** Use `Try execution — show approval gate` before approving. Show the safe `approval_required` response, then point to the decision boundary: CoCo proposes, Policy decides, and the Operator authorizes.
 6. **3:05–4:00 — Recover:** Approve and execute fixture recovery. Point out the idempotency key, fixture reference, actor, policy version, and audit events.
 7. **4:00–4:40 — Validate:** Run validation and show the incident reaching `VALIDATED` only after checks pass.
 8. **4:40–5:00 — Report:** Open the report, show evidence-linked RCA, uncertainty, audit trail, and feedback capability.
@@ -100,6 +100,20 @@ The replay also verifies viewer mutation denial, validation-before-recovery gati
 - [ ] Happy path reaches `VALIDATED` and produces a report.
 - [ ] Viewer mutations and missing approval are visibly denied.
 - [ ] Audit events, evidence, report, and fixture/degraded labels are visible.
+- [ ] Decision boundary is visible: CoCo evidence, cited proposal, deterministic policy, operator approval, fixture recovery, and validation.
+- [ ] Business impact and the rejected alternative are explained in the recommendation view.
 - [ ] Backup replay completes successfully.
 - [ ] Backup replay proves viewer denial, validation gating, and missing approval.
 - [ ] Any recording contains no credentials, raw PII, or generated SQLite files.
+
+## Submission proof capture
+
+For a live demo, capture these moments in order:
+
+1. The incident and business impact before investigation.
+2. The `CoCo live path` badge, or the truthful `CoCo fallback` badge if the live adapter degrades.
+3. Evidence cards with citations and the decision-boundary strip.
+4. The blocked pre-approval execution showing `approval_required`.
+5. Operator approval, fixture recovery reference, validation, audit timeline, and RCA.
+
+The repository remains honest in either mode: live evidence is marked `live`, fallback evidence is marked `fixture`, and recovery is always labeled fixture-only.

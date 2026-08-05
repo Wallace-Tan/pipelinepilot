@@ -4,6 +4,8 @@
 
 PipelinePilot is a governance-first incident-response teammate for data engineers. It investigates one failed data-pipeline run, assembles sanitized evidence from Airflow, dbt, and Snowflake through isolated skills, retrieves the relevant runbook, recommends a safe recovery, enforces policy and approval, validates the result, and records an explainable incident report. Snowflake CoCo CLI is the workflow orchestrator; it never holds broad production access or performs direct system operations.
 
+The competitive product boundary is explicit: CoCo can assemble and explain the context, but PipelinePilot’s typed decision boundary, deterministic policy, and accountable operator control whether any recovery proceeds.
+
 ## Critical Review of the Handover
 
 The vision is compelling, but it describes a platform-sized surface area for a seven-day solo build. The following changes preserve the core story while making a credible MVP deliverable:
@@ -51,6 +53,8 @@ Observability tools identify symptoms; generic copilots generate ungrounded sugg
 8. Invoke recovery only through the recovery skill after policy and approval checks.
 9. Validate the post-recovery condition through the validation skill.
 10. Persist immutable audit events, execution history, an RCA, and optional operator feedback.
+
+The demo makes the recommendation operationally legible by showing the affected downstream models and one rejected alternative alongside the evidence-linked cause. These are presentation-level impact explanations; the versioned recommendation contract remains stable while the MVP avoids a risky schema migration immediately before submission.
 
 ## Non-functional Requirements
 
