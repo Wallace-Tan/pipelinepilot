@@ -54,7 +54,10 @@ type RunbookEntry = {
 type ApiIncident = { id: string; pipeline_name: string; run_id: string; status: string; severity: string; detected_at: string; mode: string };
 type ApiEvidence = { id: string; source: string; summary: string; evidence_type: string; mode: string; collected_at: string; citations: { title: string; section: string }[] };
 type ApiRecommendation = { cause: string; confidence_band: string; evidence_ids: string[]; runbook_ids: string[]; recommended_action: string; impact: string; alternatives: { action: string; reason: string }[]; uncertainty: string };
-type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: ApiRecommendation | null; approvals: { created_at: string; decision: string; reason: string; actor_role: string }[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
+type ApiPolicyDecision = { id: string; action: string; decision: string; risk: string; policy_version: string; required_approver_role: string | null; reasons: string[] };
+type ApiApproval = { id: string; created_at: string; decision: string; reason: string; actor_role: string; execution_id: string; policy_version: string };
+type ApiExecution = { id: string; action: string; status: string; policy_decision_id: string; approval_id: string | null; external_reference: string | null; created_at: string; updated_at: string };
+type ApiDetail = { incident: ApiIncident; evidence: ApiEvidence[]; recommendation: ApiRecommendation | null; policy_decision: ApiPolicyDecision | null; executions: ApiExecution[]; approvals: ApiApproval[]; audit: { created_at: string; action: string; outcome: string; actor_role: string }[] };
 type ApiAuditEvent = { id: string; incident_id: string | null; execution_id: string | null; actor_role: string; action: string; outcome: string; created_at: string };
 type ApiReport = { recommendation: ApiRecommendation | null; policy_decision: { decision: string; policy_version: string; risk: string } | null; execution: { status: string; external_reference: string | null } | null; validation: { status: string; checks: string[] } | null; feedback_count: number };
 type ApiPolicyRule = { id: string; action: string; environment: string; minimum_role: string; risk: string; decision: string; required_approver_role: string | null; minimum_severity: string | null; max_retry_count: number | null; reasons: string[] };
@@ -99,6 +102,41 @@ function mapAuditEvent(value: ApiAuditEvent): AuditEntry {
     actor: value.actor_role,
     tone: warning ? "warning" : value.outcome.includes("validated") || value.outcome.includes("completed") ? "success" : "neutral",
   };
+}
+
+function formatDetailStatus(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function AgentExecutionDetail({ detail, demoStatus }: { detail: ApiDetail | null; demoStatus: DemoStatus | null }) {
+  const adapterStatus = demoStatus?.adapter_status ?? {};
+  const latestExecution = detail?.executions.at(-1) ?? null;
+  const latestApproval = detail?.approvals.at(-1) ?? null;
+  const agents = [
+    { label: "Context agents", detail: "Monitoring · Airflow · dbt · Snowflake", status: Object.values(adapterStatus).some((item) => item.mode === "live") ? "Live or mixed" : "Fixture evidence" },
+    { label: "Decision agent", detail: "Typed recommendation + citations", status: adapterStatus.decision?.status === "available" ? "Validated" : adapterStatus.decision ? formatDetailStatus(adapterStatus.decision.status) : "Awaiting investigation" },
+    { label: "Policy engine", detail: detail?.policy_decision?.policy_version ?? "No decision persisted", status: detail?.policy_decision ? formatDetailStatus(detail.policy_decision.decision) : "Pending" },
+  ];
+
+  return (
+    <section className="panel agent-detail-panel animate-in delay-2" aria-label="Agent and execution detail">
+      <div className="section-heading"><div><span className="eyebrow">Agent trace</span><h2>Decision and execution detail</h2></div><span className="count-badge">Typed API state</span></div>
+      <div className="agent-detail-grid">
+        {agents.map((agent) => <article className="agent-detail-card" key={agent.label}><span className="eyebrow">{agent.label}</span><strong>{agent.status}</strong><small>{agent.detail}</small></article>)}
+      </div>
+      <div className="execution-detail-grid">
+        <article className="execution-detail-card">
+          <div className="eyebrow-row"><span className="eyebrow">Approval record</span><span className={`status-label is-${latestApproval?.decision === "approved" ? "available" : "degraded"}`}>{latestApproval ? formatDetailStatus(latestApproval.decision) : "Not recorded"}</span></div>
+          {latestApproval ? <><strong>{latestApproval.actor_role} · {latestApproval.reason}</strong><small>{latestApproval.id} · policy {latestApproval.policy_version}</small></> : <p>No approval exists. Execution must remain blocked until an Operator approves the proposal.</p>}
+        </article>
+        <article className="execution-detail-card">
+          <div className="eyebrow-row"><span className="eyebrow">Recovery execution</span><span className={`status-label is-${latestExecution?.status === "succeeded" ? "available" : "degraded"}`}>{latestExecution ? formatDetailStatus(latestExecution.status) : "Not created"}</span></div>
+          {latestExecution ? <><strong>{latestExecution.action}</strong><small>{latestExecution.id} · {latestExecution.external_reference ?? "No external reference"}</small></> : <p>Recovery writes are fixture-only and none has been created for this incident.</p>}
+        </article>
+      </div>
+      <div className="detail-boundary-note"><Icon name="shield" size={14} /><span>Agent output is advisory. The persisted policy decision, approval identity, and execution reference are the accountable recovery boundary.</span></div>
+    </section>
+  );
 }
 
 type IconName =
@@ -499,6 +537,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null);
+  const [liveDetail, setLiveDetail] = useState<ApiDetail | null>(null);
   const [report, setReport] = useState<ApiReport | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [livePolicyDocument, setLivePolicyDocument] = useState<ApiPolicy | null>(null);
@@ -531,6 +570,7 @@ function App() {
       setDemoStatus(await statusResponse.json() as DemoStatus);
       const reportData = reportResponse.ok ? await reportResponse.json() as ApiReport : null;
       setReport(reportData);
+      setLiveDetail(detail);
       if (policyResponse.ok) {
         const policyData = await policyResponse.json() as ApiPolicyResponse;
         setLivePolicyDocument(policyData.policy);
@@ -728,6 +768,8 @@ function App() {
                </React.Fragment>)}
              </div>
            </section>
+
+           <AgentExecutionDetail detail={liveDetail} demoStatus={demoStatus} />
 
            <div className="content-grid">
             <section className="panel evidence-panel animate-in delay-2" id="evidence-workspace">

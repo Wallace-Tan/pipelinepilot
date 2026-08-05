@@ -51,6 +51,7 @@ The product remains positioned as the governed recovery layer between CoCo inves
 ### P1 — useful follow-up, not required for submission
 
 - [ ] Policy editing with version creation and admin review.
+- [x] Workbench agent/execution detail panel backed by persisted policy, approval, and execution API state.
 - [ ] Dedicated agent/execution detail pages backed by first-class API resources.
 - [ ] Cross-exception queue filtering and multiple seeded exceptions; the current search is intentionally local to the seeded demo.
 - [ ] Full browser automation and accessibility audit.
@@ -64,7 +65,7 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 - `frontend`: `npm.cmd run build` passes (TypeScript project build plus Vite production build); `npm.cmd run dev -- --host 127.0.0.1` reaches the Vite ready state using the Windows-safe config loader.
 - `frontend`: no lint command is configured in `frontend/package.json`; no unsupported lint command is claimed.
-- `backend`: canonical commands remain `uv sync` and `uv run pytest`. `uv` is unavailable and the existing local virtual environment points to a removed Python executable, so the canonical launcher could not be used; with the bundled Python 3.12 runtime and intact environment packages, the full suite passes: `46 passed, 1 warning`.
+- `backend`: canonical commands remain `uv sync` and `uv run pytest`. `uv` is unavailable and the existing local virtual environment points to a removed Python executable, so the canonical launcher could not be used; with the bundled Python 3.12 runtime and intact environment packages, the full suite passes: `47 passed, 1 warning`.
 - Runtime smoke test: `/health` returned `ok`, `/v1/demo/status` returned fixture mode with `database_ready=true`, and `scripts/demo-replay.ps1` completed with `final_status=validated` in `0.8s`.
 - `scripts/demo-replay.ps1`: now parses PowerShell error envelopes reliably and verifies viewer denial, validation-before-recovery gating, missing approval, recovery, validation, and final report output against `scripts/demo-replay.expected.json`.
 - `scripts/verify-submission.ps1` is the clean-checkout preflight for `uv`, backend tests, frontend build, and tracked-file hygiene; it remains unrun locally because `uv` is not installed.
