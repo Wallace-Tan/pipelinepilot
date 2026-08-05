@@ -65,11 +65,14 @@ The safe default demo uses fixtures. To exercise the real CoCo integration, auth
 
 ```powershell
 $env:PIPELINEPILOT_COCO_ENABLED = "true"
-$env:PIPELINEPILOT_COCO_CONNECTION = "your-snowflake-connection"
+$env:PIPELINEPILOT_COCO_COMMAND = "cortex.cmd"
+$env:PIPELINEPILOT_COCO_CONNECTION = "QE45776"
 $env:PIPELINEPILOT_COCO_TIMEOUT_SECONDS = "90"
 cd backend
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+
+`QE45776` must be a dedicated non-production, read-only CoCo connection. PipelinePilot passes it explicitly to every CoCo invocation; it does not use the active CoCo profile. Verify the account binding before starting the backend with `cortex.cmd connections list`.
 
 CoCo is invoked in one-shot JSON mode from the backend and is instructed to perform read-only Airflow/Snowflake investigation. The dashboard reports the result of the latest investigation, not merely the configuration flag: `CoCo live path`, `CoCo live context`, `CoCo fallback`, or `Fixture mode`. A newly enabled CoCo process remains `CoCo configured` until an investigation completes successfully. If CoCo is unavailable or returns malformed/uncited output, the typed boundary rejects it, the deterministic fixture recommendation is selected, and the fallback reason remains visible. Recovery remains governed by the backend policy and approval workflow and is always fixture-only.
 

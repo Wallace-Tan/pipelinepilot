@@ -78,4 +78,4 @@ The product remains positioned as the governed recovery layer between CoCo inves
 
 The only material external dependency is live CoCo verification. If Cortex is not ready, use the clearly labeled `Fixture mode` / `CoCo fallback` path. The governed lifecycle, evidence, citations, policy gate, approval, fixture recovery, validation, and audit trail remain demonstrable without credentials.
 
-Current environment evidence: `cortex.cmd --version` returns `Cortex Code v1.1.53`; Airflow and Snowflake CLI are unavailable, and no read-only connection or Airflow API variables are configured. The live path therefore remains unverified and must not be claimed in the submission.
+Current environment evidence: `cortex.cmd --version` returns `Cortex Code v1.1.53`; connection `QE45776` resolves to `bl63744.ap-southeast-5.aws`; the flattened local Airflow project is healthy on `http://localhost:8080` and both Astro and CoCo see `retail_orders_daily`. The read-only metadata preflight passes, but the full headless CoCo decision response is not yet schema-valid, so the live path remains unverified and must not be claimed in the submission.
