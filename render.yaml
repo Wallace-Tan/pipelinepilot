@@ -11,7 +11,7 @@ services:
       - key: PIPELINEPILOT_DATABASE_PATH
         value: /tmp/pipelinepilot.sqlite3
       - key: PIPELINEPILOT_CORS_ORIGINS
-        sync: false
+        value: https://pipelinepilot.vercel.app
       - key: PIPELINEPILOT_COCO_ENABLED
         value: "false"
       - key: PIPELINEPILOT_COCO_COMMAND
@@ -20,19 +20,3 @@ services:
         value: pipelinepilot
       - key: PIPELINEPILOT_COCO_TIMEOUT_SECONDS
         value: "90"
-      - key: SNOWFLAKE_ACCOUNT
-        sync: false
-      - key: SNOWFLAKE_USER
-        sync: false
-      - key: SNOWFLAKE_PASSWORD
-        sync: false
-      - key: SNOWFLAKE_AUTHENTICATOR
-        value: snowflake
-      - key: SNOWFLAKE_ROLE
-        sync: false
-      - key: SNOWFLAKE_WAREHOUSE
-        sync: false
-      - key: SNOWFLAKE_DATABASE
-        sync: false
-      - key: SNOWFLAKE_SCHEMA
-        sync: false

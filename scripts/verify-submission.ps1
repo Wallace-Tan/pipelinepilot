@@ -17,16 +17,24 @@ Require-Command "npm.cmd"
 
 Push-Location (Join-Path $repoRoot "backend")
 try {
-    if (-not $SkipInstall) { uv sync }
+    if (-not $SkipInstall) {
+        uv sync
+        if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
+    }
     uv run pytest
+    if ($LASTEXITCODE -ne 0) { throw "Backend tests failed with exit code $LASTEXITCODE." }
 } finally {
     Pop-Location
 }
 
 Push-Location (Join-Path $repoRoot "frontend")
 try {
-    if (-not $SkipInstall) { npm.cmd install }
+    if (-not $SkipInstall) {
+        npm.cmd install
+        if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE." }
+    }
     npm.cmd run build
+    if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
 } finally {
     Pop-Location
 }

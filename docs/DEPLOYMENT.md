@@ -5,7 +5,9 @@ This guide covers the deployment shape supported by the repository as it exists 
 PipelinePilot has two deployable parts:
 
 - **Backend:** FastAPI, started with Uvicorn. It persists the demo state in SQLite.
-- **Frontend:** React/Vite, compiled to static files in `frontend/dist`.
+- **Frontend:** React/Vite, compiled to static files in `frontend/dist`. The shipped frontend is [pipelinepilot.vercel.app](https://pipelinepilot.vercel.app/).
+
+The shipped backend is [pipelinepilot-api.onrender.com](https://pipelinepilot-api.onrender.com), with health at `/health`. The repository is configured for this fixture-mode deployment; use the local steps below only when developing or verifying changes.
 
 The default runtime is **fixture mode**. It is suitable for a local demo or a protected evaluation environment. The repository includes starter configuration for Vercel and Render in `frontend/vercel.json` and `render.yaml`. It does not currently provide a production authentication provider or a managed-database adapter.
 
@@ -62,7 +64,7 @@ Expected output includes `status: ok` and `mode: fixture`. The application creat
 | --- | --- | --- |
 | `PIPELINEPILOT_MODE` | `fixture` | Keep `fixture` for the supported demo deployment. `sandbox` and `live` are enum values, not complete deployment adapters. |
 | `PIPELINEPILOT_DATABASE_PATH` | `./pipelinepilot.sqlite3` | Use a persistent, writable path. Do not place the database in an ephemeral deployment directory. |
-| `PIPELINEPILOT_CORS_ORIGINS` | empty | Comma-separated browser origins allowed to call the API, for example the Vercel Production and Preview URLs. |
+| `PIPELINEPILOT_CORS_ORIGINS` | `https://pipelinepilot.vercel.app` in `render.yaml` | Comma-separated browser origins allowed to call the API. Add a preview/custom origin only when it is needed. |
 | `PIPELINEPILOT_COCO_ENABLED` | `false` | Opt-in only. A CLI login alone does not prove a live PipelinePilot integration. |
 | `PIPELINEPILOT_COCO_COMMAND` | `cortex` | Set to the installed CoCo executable, such as `cortex.cmd` on Windows. |
 | `PIPELINEPILOT_COCO_CONNECTION` | unset | Use only a dedicated, non-production, read-only connection. |
@@ -126,10 +128,10 @@ Render web services must bind to `0.0.0.0` and the platform-provided `PORT`; the
 
 The free-tier service uses ephemeral storage. Do not treat its SQLite database as durable, and do not horizontally scale this SQLite-backed service. For durable state, move to a paid Render service with a persistent disk or replace SQLite with a managed database adapter.
 
-After the service is created, open **Environment** in the left sidebar. Click **Add Environment Variable**, enter each key and value, then choose **Save, rebuild, and deploy**. Start with:
+After the service is created, verify that the shipped origin is configured. For another Vercel project, open **Environment** in the left sidebar, click **Add Environment Variable**, enter the replacement value, then choose **Save, rebuild, and deploy**:
 
 ```text
-PIPELINEPILOT_CORS_ORIGINS=https://<your-vercel-project>.vercel.app
+PIPELINEPILOT_CORS_ORIGINS=https://pipelinepilot.vercel.app
 ```
 
 You can enter multiple browser origins as a comma-separated value, for example:
@@ -235,7 +237,7 @@ VITE_PIPELINEPILOT_API_URL=https://<your-render-service>.onrender.com
 
 This variable is intentionally a public frontend URL, not a secret. Vite embeds `VITE_*` values into browser JavaScript at build time. Do not put Snowflake credentials or CoCo tokens in Vercel.
 
-For the Vercel + Render setup, the browser calls the Render API directly using the configured URL. This is cross-origin, so the Render `PIPELINEPILOT_CORS_ORIGINS` value must match the Vercel browser origin. The built frontend calls API paths such as `/health` and `/v1/...` relative to `VITE_PIPELINEPILOT_API_URL`.
+For the Vercel + Render setup, the browser calls the Render API directly using the configured URL. This is cross-origin, so the Render `PIPELINEPILOT_CORS_ORIGINS` value must match the Vercel browser origin. Production builds default to `https://pipelinepilot-api.onrender.com`; `VITE_PIPELINEPILOT_API_URL` can override it. The built frontend calls API paths such as `/health` and `/v1/...` relative to that URL.
 
 ```text
 https://your-project.vercel.app/       -> frontend
