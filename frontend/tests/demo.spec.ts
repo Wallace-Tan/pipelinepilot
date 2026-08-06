@@ -13,17 +13,16 @@ async function assertAccessible(page: Page) {
   expect(violations).toEqual({ unnamedButtons: [], unnamedInputs: [] });
 }
 
-test("landing page introduces the evidence constellation and enters the system", async ({ page }) => {
+test("landing page introduces the incident brief and enters the system", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "When pipelines fail, decisions should be explainable." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Command Center" }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /Airflow/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /dbt/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Snowflake/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Monitoring/ })).toBeVisible();
-  await page.getByRole("button", { name: /Airflow/ }).click();
-  await expect(page.getByText("Airflow · Failure signature", { exact: true })).toBeVisible();
-  await expect(page.getByText(/ColumnNotFound: order_channel/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "retail_orders_daily" })).toBeVisible();
+  await expect(page.getByText("Awaiting approval", { exact: true })).toBeVisible();
+  await expect(page.getByText("04", { exact: true })).toBeVisible();
+  await expect(page.getByText("sources collected", { exact: true })).toBeVisible();
+  await expect(page.getByText("Fixture-only recovery", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Evidence signal strip" })).toContainText("Airflow");
   await assertAccessible(page);
 
   await page.getByRole("button", { name: "Open Command Center" }).first().click();
@@ -41,13 +40,15 @@ test("landing route supports direct system entry and browser back", async ({ pag
   await expect(page.getByRole("heading", { name: "When pipelines fail, decisions should be explainable." })).toBeVisible();
 });
 
-test("constellation respects reduced motion and stays within a narrow viewport", async ({ page }) => {
+test("editorial landing brief stays within a narrow viewport", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "When pipelines fail, decisions should be explainable." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "retail_orders_daily" })).toBeVisible();
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
-  await expect(page.locator(".constellation-scene")).toHaveCSS("transform", "none");
+  await expect(page.locator(".incident-brief")).toBeVisible();
+  await expect(page.locator(".landing-signal-strip")).toBeVisible();
   await assertAccessible(page);
 });
 
