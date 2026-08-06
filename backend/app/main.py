@@ -3,6 +3,7 @@ import asyncio
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 
 from app.api.dependencies import AppResources
@@ -19,6 +20,15 @@ from app.services.adapter_status import initial_adapter_status
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version="0.1.0")
+    if settings.cors_origin_list:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origin_list,
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["Content-Type", "Idempotency-Key", "X-Actor-Id", "X-Actor-Role"],
+            expose_headers=["X-Correlation-ID"],
+        )
     database = Database(settings.database_path)
     connection = database.connect()
     app.state.resources = AppResources(settings=settings, database=database, connection=connection)

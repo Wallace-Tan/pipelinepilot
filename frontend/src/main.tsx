@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./styles.css";
+import { apiUrl } from "./api";
 
 type EvidenceStatus = "available" | "degraded";
 type EvidenceFilter = "all" | "available" | "degraded";
@@ -73,25 +74,25 @@ type DemoAdapterStatus = { mode: string; status: string; source: string; reason?
 type DemoStatus = { mode: string; fixture: string; database_ready: boolean; adapters: Record<string, string>; adapter_status: Record<string, DemoAdapterStatus> };
 
 async function fetchIncident(): Promise<ApiDetail> {
-  const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}`);
+  const response = await fetch(apiUrl(`/v1/incidents/${API_INCIDENT_ID}`));
   if (!response.ok) throw new Error("Incident API is unavailable.");
   return response.json() as Promise<ApiDetail>;
 }
 
 async function fetchIncidents(): Promise<{ items: ApiIncident[]; total: number }> {
-  const response = await fetch("/v1/incidents?limit=100");
+  const response = await fetch(apiUrl("/v1/incidents?limit=100"));
   if (!response.ok) throw new Error("Incident queue is unavailable.");
   return response.json() as Promise<{ items: ApiIncident[]; total: number }>;
 }
 
 async function fetchAgentDetail(): Promise<ApiAgentDetail> {
-  const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/agent`);
+  const response = await fetch(apiUrl(`/v1/incidents/${API_INCIDENT_ID}/agent`));
   if (!response.ok) throw new Error("Agent detail is unavailable.");
   return response.json() as Promise<ApiAgentDetail>;
 }
 
 async function fetchExecutionDetail(executionId: string): Promise<ApiExecutionDetail> {
-  const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/executions/${executionId}`);
+  const response = await fetch(apiUrl(`/v1/incidents/${API_INCIDENT_ID}/executions/${executionId}`));
   if (!response.ok) throw new Error("Execution detail is unavailable.");
   return response.json() as Promise<ApiExecutionDetail>;
 }
@@ -608,7 +609,7 @@ function AuditLogView({ entries, onOpenWorkbench, onNotice }: { entries: AuditEn
   const loadAdminAudit = async () => {
     setAdminLoading(true);
     try {
-      const response = await fetch("/v1/audit-logs", { headers: API_ADMIN_HEADERS });
+      const response = await fetch(apiUrl("/v1/audit-logs"), { headers: API_ADMIN_HEADERS });
       if (!response.ok) throw new Error(response.status === 403 ? "Admin authorization is required for the cross-incident audit index." : "The audit index is unavailable.");
       const payload = await response.json() as { items: ApiAuditEvent[] };
       setAdminEntries(payload.items.map(mapAuditEvent));
@@ -805,7 +806,7 @@ function SystemApp() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const [detail, statusResponse, reportResponse, policyResponse, queueResponse, agentResponse] = await Promise.all([fetchIncident(), fetch("/v1/demo/status"), fetch(`/v1/incidents/${API_INCIDENT_ID}/report`), fetch("/v1/policies/current"), fetchIncidents(), fetchAgentDetail()]);
+      const [detail, statusResponse, reportResponse, policyResponse, queueResponse, agentResponse] = await Promise.all([fetchIncident(), fetch(apiUrl("/v1/demo/status")), fetch(apiUrl(`/v1/incidents/${API_INCIDENT_ID}/report`)), fetch(apiUrl("/v1/policies/current")), fetchIncidents(), fetchAgentDetail()]);
       if (!statusResponse.ok) throw new Error("Demo readiness status is unavailable.");
       setDemoStatus(await statusResponse.json() as DemoStatus);
       const reportData = reportResponse.ok ? await reportResponse.json() as ApiReport : null;
@@ -889,7 +890,7 @@ function SystemApp() {
   const resetDemo = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/v1/demo/reset", { method: "POST", headers: API_ADMIN_HEADERS });
+      const response = await fetch(apiUrl("/v1/demo/reset"), { method: "POST", headers: API_ADMIN_HEADERS });
       if (!response.ok) throw new Error("Admin fixture reset was rejected.");
       await refresh();
       setNotice("Fixture reset completed. The seeded incident is ready for a new walkthrough.");
@@ -903,7 +904,7 @@ function SystemApp() {
     if (actionLoading) return;
     setActionLoading(true);
     try {
-      const response = await fetch(`/v1/incidents/${API_INCIDENT_ID}/${path}`, { method: "POST", headers: { ...API_HEADERS, "Idempotency-Key": key }, body: body ? JSON.stringify(body) : undefined });
+      const response = await fetch(apiUrl(`/v1/incidents/${API_INCIDENT_ID}/${path}`), { method: "POST", headers: { ...API_HEADERS, "Idempotency-Key": key }, body: body ? JSON.stringify(body) : undefined });
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null;
         const code = payload?.error?.code;
