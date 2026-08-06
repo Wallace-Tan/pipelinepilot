@@ -170,6 +170,27 @@ Invoke-RestMethod https://<your-render-service>.onrender.com/health
 Invoke-RestMethod https://<your-render-service>.onrender.com/v1/demo/status
 ```
 
+### Render troubleshooting: `PermissionError: '/var/data'`
+
+If the logs show `PermissionError: [Errno 13] Permission denied: '/var/data'`, the service is using `PIPELINEPILOT_DATABASE_PATH=/var/data/pipelinepilot.sqlite3` but no writable disk is mounted there.
+
+Fix it in the Render Dashboard:
+
+1. Open the `pipelinepilot-api` service.
+2. Go to **Settings** > **Disks**.
+3. Click **Add Disk**.
+4. Set **Mount Path** to `/var/data`.
+5. Set the size to at least `1 GB` and save.
+6. Open **Environment** and confirm:
+
+   ```text
+   PIPELINEPILOT_DATABASE_PATH=/var/data/pipelinepilot.sqlite3
+   ```
+
+7. Choose **Save, rebuild, and deploy**, or manually redeploy after attaching the disk.
+
+Persistent disks require a paid Render service. For a disposable fixture demo without persistent storage, set the database path to `/tmp/pipelinepilot.sqlite3` instead and redeploy. The service should then start, but all SQLite state is lost when Render restarts or redeploys it.
+
 ## 4. Deploy the frontend to Vercel
 
 First, create the Vercel project. You can build locally first if you want to catch errors:
