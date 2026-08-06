@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,7 @@ class CocoCliClient:
         if isinstance(value, str):
             if "{" in value and "}" in value:
                 candidates.append(value)
+                candidates.extend(CocoCliClient._embedded_json_candidates(value))
             return
         if isinstance(value, dict):
             for nested in value.values():
@@ -103,3 +105,19 @@ class CocoCliClient:
         if isinstance(value, list):
             for nested in value:
                 CocoCliClient._collect_strings(nested, candidates)
+
+    @staticmethod
+    def _embedded_json_candidates(value: str) -> list[str]:
+        candidates: list[str] = []
+        for match in re.finditer(r"```(?:json)?\s*(\{.*?\})\s*```", value, flags=re.IGNORECASE | re.DOTALL):
+            candidates.append(match.group(1))
+        decoder = json.JSONDecoder()
+        for start, character in enumerate(value):
+            if character != "{":
+                continue
+            try:
+                _, end = decoder.raw_decode(value[start:])
+            except json.JSONDecodeError:
+                continue
+            candidates.append(value[start:start + end])
+        return candidates

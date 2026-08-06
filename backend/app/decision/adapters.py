@@ -67,7 +67,7 @@ class CocoDecisionAdapter:
             fallback_result = self.fallback.decide(incident, evidence)
             return fallback_result.model_copy(
                 update={
-                    "fallback_reason": f"CoCo decision unavailable ({type(error).__name__}); deterministic fixture fallback selected.",
+                    "fallback_reason": f"CoCo decision unavailable: {str(error)[:360]}; deterministic fixture fallback selected.",
                 }
             )
 

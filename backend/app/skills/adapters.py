@@ -121,7 +121,7 @@ class CocoContextSkill(ContextSkill):
                 return fallback_result.model_copy(
                     update={
                         "status": SkillStatus.DEGRADED,
-                        "degradation_reason": f"CoCo unavailable ({type(error).__name__}); fixture evidence retained.",
+                        "degradation_reason": f"CoCo unavailable: {str(error)[:360]}; fixture evidence retained.",
                     }
                 )
             return SkillResult(
