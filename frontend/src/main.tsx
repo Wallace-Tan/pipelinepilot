@@ -300,55 +300,6 @@ const policy: PolicyPosture = {
   action: "Update staging projection and rerun downstream order models",
 };
 
-type ConstellationSource = {
-  id: "airflow" | "dbt" | "snowflake" | "monitoring";
-  label: string;
-  role: string;
-  summary: string;
-  citation: string;
-  accent: "blue" | "lavender" | "amber" | "emerald";
-  icon: IconName;
-};
-
-const constellationSources: ConstellationSource[] = [
-  {
-    id: "airflow",
-    label: "Airflow",
-    role: "Failure signature",
-    summary: "ColumnNotFound: order_channel during staging compilation.",
-    citation: "runbook-schema-drift · Validate downstream model contracts",
-    accent: "blue",
-    icon: "terminal",
-  },
-  {
-    id: "dbt",
-    label: "dbt",
-    role: "Freshness impact",
-    summary: "stg_orders failed and downstream freshness is stale.",
-    citation: "runbook-schema-drift · Validate downstream model contracts",
-    accent: "lavender",
-    icon: "layers",
-  },
-  {
-    id: "snowflake",
-    label: "Snowflake",
-    role: "Metadata context",
-    summary: "Read-only metadata confirms order_channel is new.",
-    citation: "runbook-schema-drift · Compare source metadata with staging projections",
-    accent: "amber",
-    icon: "database",
-  },
-  {
-    id: "monitoring",
-    label: "Monitoring",
-    role: "Incident signal",
-    summary: "Pipeline failed in transform_orders with no retry running.",
-    citation: "retail_orders_daily · airflow-run-20260723T040000Z",
-    accent: "emerald",
-    icon: "activity",
-  },
-];
-
 const audit: AuditEntry[] = [
   { time: "09:22:14", action: "Investigation completed", detail: "4 evidence sources collected · 1 degraded", actor: "system", tone: "success" },
   { time: "09:21:45", action: "dbt context attached", detail: "stg_orders failed · freshness stale", actor: "dbt health", tone: "neutral" },
@@ -653,25 +604,6 @@ function AuditLogView({ entries, onOpenWorkbench, onNotice }: { entries: AuditEn
 }
 
 function LandingPage({ onOpenSystem }: { onOpenSystem: () => void }) {
-  const [selectedSource, setSelectedSource] = useState<ConstellationSource["id"]>("monitoring");
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const selected = constellationSources.find((source) => source.id === selectedSource) ?? constellationSources[0];
-  const constellationStyle = {
-    "--constellation-rotate-x": `${tilt.x}deg`,
-    "--constellation-rotate-y": `${tilt.y}deg`,
-  } as React.CSSProperties;
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    setTilt({
-      x: ((event.clientY - bounds.top) / bounds.height - 0.5) * -5,
-      y: ((event.clientX - bounds.left) / bounds.width - 0.5) * 7,
-    });
-  };
-
-  const resetTilt = () => setTilt({ x: 0, y: 0 });
-
   return (
     <main className="landing-page">
       <header className="landing-header">
@@ -697,39 +629,22 @@ function LandingPage({ onOpenSystem }: { onOpenSystem: () => void }) {
           <div className="landing-trust-row"><span><Icon name="shield" size={14} />Policy before recovery</span><span><Icon name="lock" size={14} />No direct production writes</span></div>
         </div>
 
-        <div className="constellation-wrap" onPointerLeave={resetTilt} onPointerMove={handlePointerMove}>
-          <div className="constellation-scene" style={constellationStyle}>
-            <div className="constellation-orbit constellation-orbit-one" aria-hidden="true" />
-            <div className="constellation-orbit constellation-orbit-two" aria-hidden="true" />
-            <svg className="constellation-lines" aria-hidden="true" viewBox="0 0 100 100">
-              {constellationSources.map((source, index) => <line className={`constellation-line line-${source.id} ${selectedSource === source.id ? "is-active" : ""}`} key={source.id} x1="50" y1="50" x2={index === 0 ? "50" : index === 1 ? "89" : index === 2 ? "50" : "11"} y2={index === 0 ? "9" : index === 1 ? "50" : index === 2 ? "91" : "50"} />)}
-            </svg>
-            <div className="constellation-core" aria-label="Central incident: retail_orders_daily schema drift">
-              <span className="constellation-core-pulse" aria-hidden="true" />
-              <span className="eyebrow">Central incident</span>
-              <strong>retail_orders_daily</strong>
-              <small>schema drift · high priority</small>
-              <span className="constellation-core-status"><span className="signal-dot" />Awaiting approval</span>
-            </div>
-            {constellationSources.map((source) => (
-              <button
-                aria-pressed={selectedSource === source.id}
-                className={`constellation-node node-${source.id} is-${source.accent} ${selectedSource === source.id ? "is-selected" : ""}`}
-                key={source.id}
-                onClick={() => setSelectedSource(source.id)}
-                type="button"
-              >
-                <span className="constellation-node-icon"><Icon name={source.icon} size={15} /></span>
-                <span><strong>{source.label}</strong><small>{source.role}</small></span>
-              </button>
-            ))}
+        <article className="incident-brief" aria-label="Seeded incident brief">
+          <div className="incident-brief-topline"><span>Incident brief</span><span>Sanitized fixture / 23 Jul 2026</span></div>
+          <div className="incident-brief-heading"><div><span className="eyebrow">Current exception</span><h2>retail_orders_daily</h2><p>Schema drift in <code>stg_orders</code> · high priority</p></div><span className="brief-status is-amber"><span className="signal-dot" />Awaiting approval</span></div>
+          <div className="incident-brief-rule" />
+          <div className="incident-brief-metrics">
+            <div><span className="eyebrow">Evidence</span><strong>04</strong><small>sources collected</small></div>
+            <div><span className="eyebrow">Degraded</span><strong>01</strong><small>read-only context</small></div>
+            <div><span className="eyebrow">Policy</span><strong>Gate</strong><small>approval required</small></div>
           </div>
-          <div className="constellation-caption" aria-live="polite">
-            <div className="constellation-caption-heading"><span className={`source-icon source-${selected.id}`}><Icon name={selected.icon} size={15} /></span><span><span className="eyebrow">Selected evidence path</span><strong>{selected.label} · {selected.role}</strong></span></div>
-            <p>{selected.summary}</p>
-            <small><Icon name="file" size={12} />{selected.citation}</small>
-          </div>
-        </div>
+          <div className="incident-brief-action"><span className="eyebrow">Proposed recovery</span><strong>Update staging projection and rerun downstream order models.</strong><span><Icon name="shield" size={14} />Operator approval remains the recovery boundary.</span></div>
+          <div className="incident-brief-footer"><span><span className="status-dot is-emerald" />Fixture-only recovery</span><span>Policy v1 · audit-backed</span></div>
+        </article>
+      </section>
+
+      <section className="landing-signal-strip" aria-label="Evidence signal strip">
+        <span>Signal path</span><span>Monitoring · incident created</span><span>Airflow · parser signature matched</span><span>dbt · freshness stale</span><span>Snowflake · metadata degraded</span>
       </section>
 
       <section className="landing-proof" aria-label="PipelinePilot proof points">
