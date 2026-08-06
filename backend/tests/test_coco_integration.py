@@ -33,6 +33,20 @@ def test_coco_client_extracts_structured_json_from_stream_output(monkeypatch) ->
     assert client.prompt_json("inspect the incident", required_keys={"summary", "evidence_type"}) == response
 
 
+def test_coco_client_extracts_fenced_json_from_stream_output(monkeypatch) -> None:
+    response = {"summary": "run failed", "evidence_type": "run_status"}
+
+    def fake_run(args, **kwargs):
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps({"type": "result", "result": f"```json\n{json.dumps(response)}\n```"}),
+        )
+
+    monkeypatch.setattr("app.integrations.coco.subprocess.run", fake_run)
+
+    assert CocoCliClient().prompt_json("inspect the incident", required_keys={"summary", "evidence_type"}) == response
+
+
 def test_coco_client_fails_closed_on_cli_error(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.integrations.coco.subprocess.run",
