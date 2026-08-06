@@ -172,7 +172,15 @@ def investigate(request: Request, incident_id: str, identity: RequestIdentity = 
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Incident not found."})
     settings = resources(request).settings
     skills = coco_skills(coco_client(request), FIXTURE_ROOT) if settings.coco_enabled else fixture_skills(FIXTURE_ROOT)
-    service = InvestigationService(incident_repo, evidence_repo, audit_repo, SkillCoordinator(skills), RedactionService(), identity.role)
+    coordinator_timeout = settings.coco_timeout_seconds if settings.coco_enabled else 5.0
+    service = InvestigationService(
+        incident_repo,
+        evidence_repo,
+        audit_repo,
+        SkillCoordinator(skills, timeout_seconds=coordinator_timeout),
+        RedactionService(),
+        identity.role,
+    )
     result = service.investigate(incident)
     evidence = evidence_repo.list_for_incident(incident_id)
     try:
