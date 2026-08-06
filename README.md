@@ -42,6 +42,7 @@ The Vite dev server prints the local URL, normally `http://127.0.0.1:5173/`. The
 - [Implementation roadmap](docs/TASKS.md)
 - [Hackathon notes](docs/HACKATHON.md)
 - [Demo guide](docs/DEMO.md)
+- [Deployment guide](docs/DEPLOYMENT.md)
 - [Judge demo script](DEMO_SCRIPT.md)
 - [Hackathon status and acceptance audit](HACKATHON_STATUS.md)
 - [Live Airflow/Cortex verification](docs/LIVE_INTEGRATION.md)
