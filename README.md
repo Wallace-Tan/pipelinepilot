@@ -41,18 +41,11 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-For local development only, run the backend and Vite commands documented in [docs/DEMO.md](docs/DEMO.md). Production builds use `https://pipelinepilot-api.onrender.com` by default; `VITE_PIPELINEPILOT_API_URL` can override it for another environment.
+For local development, run the backend and Vite commands from the project configuration. Production builds use `https://pipelinepilot-api.onrender.com` by default; `VITE_PIPELINEPILOT_API_URL` can override it for another environment.
 
-## What is included
+## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Product requirements](docs/PRD.md)
-- [Demo guide](docs/DEMO.md)
-- [Deployment configuration](docs/DEPLOYMENT.md)
-- [Judge demo script](DEMO_SCRIPT.md)
-- [CoCo/Airflow verification boundary](docs/LIVE_INTEGRATION.md)
-
-Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`. Runbooks live under `data/runbooks`, and the immutable fixture policy is `data/policies/demo_policy.json`.
+The extended architecture, product, deployment, demo, roadmap, and CoCo verification documents are maintained on the [`dev` branch](../../tree/dev). Sanitized schema-drift fixtures live under `data/fixtures/schema_drift`, runbooks live under `data/runbooks`, and the immutable fixture policy is `data/policies/demo_policy.json`.
 
 ## Safety and operating boundary
 
