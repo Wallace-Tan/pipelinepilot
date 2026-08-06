@@ -90,9 +90,9 @@ The Blueprint creates a Python web service with:
 - build command: install `uv`, install the Cortex Code CLI, then run `uv sync --frozen --no-dev` in `backend`;
 - start command: create the deployment-local Snowflake connection metadata and run Uvicorn on Render's `$PORT`;
 - health check: `/health`;
-- a 1 GB persistent disk mounted at `/var/data` for SQLite.
+- a writable `/tmp/pipelinepilot.sqlite3` path for SQLite.
 
-If the Blueprint review page does not allow the disk on your selected plan, choose a paid **Starter** instance or create the service using Option B and add the disk from **Settings > Disks**. Render persistent disks require a paid service.
+The free-tier Blueprint intentionally uses `/tmp` because persistent disks are not available on the free tier. SQLite state is therefore disposable and can reset when Render restarts or redeploys the service.
 
 ### Option B -- Render Web Service (manual dashboard setup)
 
@@ -116,15 +116,15 @@ Use this if you prefer to enter the settings yourself:
    bash scripts/render-start.sh
    ```
 
-9. Select a paid **Starter** instance if you want persistent SQLite storage.
+9. Select the free instance type for a disposable fixture deployment.
 10. Click **Advanced**, set **Health Check Path** to `/health`, then create the service.
-11. After creation, open the service's **Settings** > **Disks** > **Add Disk**. Set **Mount Path** to `/var/data` and size to `1 GB`.
-12. Click the service's **Environment** tab and add the variables in the next section.
+11. Click the service's **Environment** tab and add the variables in the next section.
+12. Add `PIPELINEPILOT_DATABASE_PATH=/tmp/pipelinepilot.sqlite3`.
 13. Save with **Save, rebuild, and deploy**.
 
 Render web services must bind to `0.0.0.0` and the platform-provided `PORT`; the repository's `scripts/render-start.sh` already does this. [Render's web-service documentation](https://render.com/docs/web-services) explains this requirement.
 
-Persistent disks require a paid Render service and are single-instance storage. Do not horizontally scale this SQLite-backed service. If you intentionally use an ephemeral/free service for a disposable demo, change `PIPELINEPILOT_DATABASE_PATH` to a writable ephemeral path and expect state to be lost on restart.
+The free-tier service uses ephemeral storage. Do not treat its SQLite database as durable, and do not horizontally scale this SQLite-backed service. For durable state, move to a paid Render service with a persistent disk or replace SQLite with a managed database adapter.
 
 After the service is created, open **Environment** in the left sidebar. Click **Add Environment Variable**, enter each key and value, then choose **Save, rebuild, and deploy**. Start with:
 
@@ -172,24 +172,21 @@ Invoke-RestMethod https://<your-render-service>.onrender.com/v1/demo/status
 
 ### Render troubleshooting: `PermissionError: '/var/data'`
 
-If the logs show `PermissionError: [Errno 13] Permission denied: '/var/data'`, the service is using `PIPELINEPILOT_DATABASE_PATH=/var/data/pipelinepilot.sqlite3` but no writable disk is mounted there.
+If the logs show `PermissionError: [Errno 13] Permission denied: '/var/data'`, the service is still using the paid-tier database path even though the free tier has no mounted disk.
 
-Fix it in the Render Dashboard:
+For the free tier, fix it in the Render Dashboard:
 
 1. Open the `pipelinepilot-api` service.
-2. Go to **Settings** > **Disks**.
-3. Click **Add Disk**.
-4. Set **Mount Path** to `/var/data`.
-5. Set the size to at least `1 GB` and save.
-6. Open **Environment** and confirm:
+2. Open **Environment**.
+3. Set:
 
    ```text
-   PIPELINEPILOT_DATABASE_PATH=/var/data/pipelinepilot.sqlite3
+   PIPELINEPILOT_DATABASE_PATH=/tmp/pipelinepilot.sqlite3
    ```
 
-7. Choose **Save, rebuild, and deploy**, or manually redeploy after attaching the disk.
+4. Choose **Save, rebuild, and deploy**.
 
-Persistent disks require a paid Render service. For a disposable fixture demo without persistent storage, set the database path to `/tmp/pipelinepilot.sqlite3` instead and redeploy. The service should then start, but all SQLite state is lost when Render restarts or redeploys it.
+The service should then start, but all SQLite state is lost when Render restarts or redeploys it. On a paid plan, you can instead attach a disk at `/var/data` and use `/var/data/pipelinepilot.sqlite3`.
 
 ## 4. Deploy the frontend to Vercel
 
