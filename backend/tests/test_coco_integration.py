@@ -22,7 +22,7 @@ def test_coco_client_extracts_structured_json_from_stream_output(monkeypatch) ->
 
     def fake_run(args, **kwargs):
         assert args[:3] == ["cortex", "--connection", "demo"]
-        assert args[3:7] == ["--sql-read-only", "--allowed-tools", "SQL", "--print"]
+        assert args[3:8] == ["--no-auto-update", "--sql-read-only", "--allowed-tools", "SQL", "--print"]
         assert "--print" in args
         assert kwargs["timeout"] == 12
         return SimpleNamespace(returncode=0, stdout=json.dumps({"type": "assistant", "text": json.dumps(response)}))

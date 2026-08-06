@@ -53,10 +53,10 @@ cortex airflow tasks list retail_orders_daily airflow-run-20260723T040000Z
 
 ```powershell
 cortex.cmd connections list
-cortex.cmd --connection QE45776 --sql-read-only --allowed-tools SQL --print "Using only read-only session metadata, return one JSON object with the Snowflake account identifier, authenticated user, active role, warehouse, database, and schema. Do not query business tables, expose secrets, or perform any write or administrative operation." --output-format stream-json
+cortex.cmd --connection <your_connection_name> --sql-read-only --allowed-tools SQL --print "Using only read-only session metadata, return one JSON object with the Snowflake account identifier, authenticated user, active role, warehouse, database, and schema. Do not query business tables, expose secrets, or perform any write or administrative operation." --output-format stream-json
 ```
 
-Confirm that `QE45776` resolves to the intended non-production account and read-only role. The active profile may be different; do not rely on it. Use only a metadata prompt and confirm that no write or administrative operation is attempted.
+Confirm that `<your_connection_name>` resolves to the intended non-production account and dedicated read-only role. The active profile may be different; do not rely on it. The verifier rejects `ACCOUNTADMIN`. Use only a metadata prompt and confirm that no write or administrative operation is attempted.
 
 ## PipelinePilot proof
 
@@ -75,7 +75,8 @@ Start the backend with:
 ```powershell
 $env:PIPELINEPILOT_COCO_ENABLED = "true"
 $env:PIPELINEPILOT_COCO_COMMAND = "cortex.cmd"
-$env:PIPELINEPILOT_COCO_CONNECTION = "QE45776"
+$env:PIPELINEPILOT_COCO_CONNECTION = "your_connection_name"
+$env:PIPELINEPILOT_EXPECTED_SNOWFLAKE_ACCOUNT = "your-org-your-account"
 $env:PIPELINEPILOT_COCO_TIMEOUT_SECONDS = "90"
 cd backend
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
@@ -87,7 +88,7 @@ Then run:
 .\scripts\verify-coco-live.ps1
 ```
 
-PipelinePilot adds `--sql-read-only --allowed-tools SQL` to every CoCo invocation. The script first verifies that `QE45776` resolves to the expected Snowflake account, that `uv` is available for CoCo Airflow commands, that CoCo Airflow health succeeds, and that a read-only metadata prompt completes with the expected account identifier. It then fails closed unless the investigation response contains live evidence from monitoring, Airflow logs, dbt context, and Snowflake metadata, plus a live validated recommendation. A CLI login alone is not evidence of PipelinePilot integration.
+PipelinePilot adds `--no-auto-update --sql-read-only --allowed-tools SQL` to every CoCo invocation. Disabling automatic updates keeps a governed investigation from changing the CLI binary or hanging while an update is installed. The script verifies that the configured connection resolves to the expected Snowflake account when `PIPELINEPILOT_EXPECTED_SNOWFLAKE_ACCOUNT` is set, that `uv` is available for CoCo Airflow commands, that CoCo Airflow health succeeds, and that a read-only metadata prompt completes with the expected account identifier. It then fails closed unless the investigation response contains live evidence from monitoring, Airflow logs, dbt context, and Snowflake metadata, plus a live validated recommendation. A CLI login alone is not evidence of PipelinePilot integration.
 
 ## Governance proof
 
@@ -114,4 +115,4 @@ Record the date, CLI versions, sanitized command results, PipelinePilot investig
 
 ## Current verification state
 
-As of 5 August 2026, `cortex.cmd --version` reports `Cortex Code v1.1.53`, and the configured profiles include `QE45776`. Live verification is complete only when the preconditions above are completed and `scripts/verify-coco-live.ps1` succeeds; otherwise use the clearly labeled deterministic fallback path.
+Live verification is complete only when the preconditions above are completed and `scripts/verify-coco-live.ps1` succeeds for the deployment owner's configured connection; otherwise use the clearly labeled deterministic fallback path.

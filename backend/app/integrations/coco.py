@@ -43,7 +43,16 @@ class CocoCliClient:
             args.extend(["--connection", self.connection])
         if self.workdir:
             args.extend(["--workdir", self.workdir])
-        args.extend(["--sql-read-only", "--allowed-tools", "SQL", "--print", prompt, "--output-format", "stream-json"])
+        args.extend([
+            "--no-auto-update",
+            "--sql-read-only",
+            "--allowed-tools",
+            "SQL",
+            "--print",
+            prompt,
+            "--output-format",
+            "stream-json",
+        ])
         try:
             completed = subprocess.run(
                 args,

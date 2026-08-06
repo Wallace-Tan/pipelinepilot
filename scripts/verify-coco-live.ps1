@@ -1,8 +1,8 @@
 param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
     [string]$IncidentId = "inc-retail-orders-20260723",
-    [string]$Connection = "QE45776",
-    [string]$ExpectedAccount = "bl63744.ap-southeast-5.aws"
+    [string]$Connection = "",
+    [string]$ExpectedAccount = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,8 +21,18 @@ if (-not $cortex) {
 $cortexCommand = $cortex.Source
 
 $configuredConnection = [Environment]::GetEnvironmentVariable("PIPELINEPILOT_COCO_CONNECTION")
+if ([string]::IsNullOrWhiteSpace($Connection)) {
+    $Connection = $configuredConnection
+}
+if ([string]::IsNullOrWhiteSpace($Connection)) {
+    throw "Pass -Connection or set PIPELINEPILOT_COCO_CONNECTION before running live verification."
+}
 if (-not [string]::IsNullOrWhiteSpace($configuredConnection) -and $configuredConnection -ne $Connection) {
     throw "PIPELINEPILOT_COCO_CONNECTION is '$configuredConnection', expected '$Connection'."
+}
+$configuredExpectedAccount = [Environment]::GetEnvironmentVariable("PIPELINEPILOT_EXPECTED_SNOWFLAKE_ACCOUNT")
+if ([string]::IsNullOrWhiteSpace($ExpectedAccount)) {
+    $ExpectedAccount = $configuredExpectedAccount
 }
 
 function Invoke-CocoCommand {
@@ -46,10 +56,10 @@ if (-not $connectionProperty) {
     throw "CoCo connection '$Connection' is not configured."
 }
 $actualAccount = [string]$connectionProperty.Value.account
-if ($actualAccount -ne $ExpectedAccount) {
+if (-not [string]::IsNullOrWhiteSpace($ExpectedAccount) -and $actualAccount -ne $ExpectedAccount) {
     throw "CoCo connection '$Connection' resolves to '$actualAccount', expected '$ExpectedAccount'."
 }
-$expectedAccountIdentifier = ($actualAccount -split '\.')[0]
+$expectedAccountIdentifier = (($ExpectedAccount | ForEach-Object { if ([string]::IsNullOrWhiteSpace($_)) { $actualAccount } else { $_ } }) -split '\.')[0]
 Write-Host "CoCo connection verified: $Connection -> $actualAccount"
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
@@ -64,7 +74,7 @@ try {
 
 $metadataPrompt = "Using only read-only session metadata, return one JSON object with the Snowflake account identifier, authenticated user, active role, warehouse, database, and schema. Do not query business tables, expose secrets, or perform any write or administrative operation."
 try {
-    $metadataOutput = Invoke-CocoCommand @("--connection", $Connection, "--sql-read-only", "--allowed-tools", "SQL", "--print", $metadataPrompt, "--output-format", "stream-json")
+    $metadataOutput = Invoke-CocoCommand @( "--no-auto-update", "--connection", $Connection, "--sql-read-only", "--allowed-tools", "SQL", "--print", $metadataPrompt, "--output-format", "stream-json")
 } catch {
     throw "Read-only CoCo metadata preflight failed or timed out for connection '$Connection'."
 }
@@ -73,6 +83,9 @@ if ([string]::IsNullOrWhiteSpace($metadataOutput)) {
 }
 if ($metadataOutput -notmatch [regex]::Escape($expectedAccountIdentifier) -or $metadataOutput -notmatch '\\?"account(?:_identifier)?\\?"\s*:') {
     throw "Read-only CoCo metadata preflight did not return the expected Snowflake account metadata."
+}
+if ($metadataOutput -match '(?i)\\?"active_role\\?"\s*:\s*\\?"ACCOUNTADMIN\\?"') {
+    throw "Live CoCo verification requires a dedicated least-privilege role; ACCOUNTADMIN is not accepted."
 }
 
 $operator = @{ "X-Actor-Id" = "demo-operator"; "X-Actor-Role" = "operator" }
@@ -111,6 +124,7 @@ if ($status.adapter_status.decision.mode -ne "live" -or $status.adapter_status.d
     incident_id = $result.incident.id
     connection = $Connection
     snowflake_account = $actualAccount
+    expected_snowflake_account = $ExpectedAccount
     adapter_mode = $result.adapter_mode
     evidence_modes = @($result.evidence | ForEach-Object { $_.mode } | Sort-Object -Unique)
     evidence_sources = $actualSources | Sort-Object -Unique
