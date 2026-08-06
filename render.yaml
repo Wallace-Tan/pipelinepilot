@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: pipelinepilot-api
+    runtime: python
+    plan: starter
+    buildCommand: python -m pip install uv && curl -LsS https://ai.snowflake.com/static/cc-scripts/install.sh | sh && cd backend && uv sync --frozen --no-dev
+    startCommand: bash scripts/render-start.sh
+    healthCheckPath: /health
+    envVars:
+      - key: PIPELINEPILOT_MODE
+        value: fixture
+      - key: PIPELINEPILOT_DATABASE_PATH
+        value: /var/data/pipelinepilot.sqlite3
+      - key: PIPELINEPILOT_CORS_ORIGINS
+        sync: false
+      - key: PIPELINEPILOT_COCO_ENABLED
+        value: "false"
+      - key: PIPELINEPILOT_COCO_COMMAND
+        value: cortex
+      - key: PIPELINEPILOT_COCO_CONNECTION
+        value: pipelinepilot
+      - key: PIPELINEPILOT_COCO_TIMEOUT_SECONDS
+        value: "90"
+      - key: SNOWFLAKE_ACCOUNT
+        sync: false
+      - key: SNOWFLAKE_USER
+        sync: false
+      - key: SNOWFLAKE_PASSWORD
+        sync: false
+      - key: SNOWFLAKE_AUTHENTICATOR
+        value: snowflake
+      - key: SNOWFLAKE_ROLE
+        sync: false
+      - key: SNOWFLAKE_WAREHOUSE
+        sync: false
+      - key: SNOWFLAKE_DATABASE
+        sync: false
+      - key: SNOWFLAKE_SCHEMA
+        sync: false
+    disk:
+      name: pipelinepilot-data
+      mountPath: /var/data
+      sizeGB: 1
